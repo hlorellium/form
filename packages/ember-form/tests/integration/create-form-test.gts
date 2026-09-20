@@ -45,13 +45,13 @@ type ArrayForm = EmberFormType<typeof arrayOptions>;
 let arrayRenderCount = 0;
 
 interface ArrayRenderProbeSignature {
-  Args: { length: number };
+  Args: { value: Array<ArrayItem> };
 }
 
 class ArrayRenderProbe extends Component<ArrayRenderProbeSignature> {
   get length(): number {
     arrayRenderCount++;
-    return this.args.length;
+    return this.args.value.length;
   }
 
   <template><output id="array-length">{{this.length}}</output></template>
@@ -216,7 +216,7 @@ module('Integration | createForm v2', function (hooks) {
 
     await render(<template>
       <form.ArrayField @name="items" as |arrayField|>
-        <ArrayRenderProbe @length={{arrayField.value.length}} />
+        <ArrayRenderProbe @value={{arrayField.value}} />
         {{#each arrayField.value as |_item index|}}
           <ArrayItemBinding @form={{form}} @index={{index}} />
         {{/each}}
@@ -237,13 +237,23 @@ module('Integration | createForm v2', function (hooks) {
     );
 
     await click('#blur-0');
+    const beforeMoveRenderCount = arrayRenderCount;
     form.moveFieldValue('items', 0, 1);
     await settled();
+    assert.true(
+      arrayRenderCount > beforeMoveRenderCount,
+      'same-length movement invalidates array structure by version',
+    );
     assert.dom('#item-0').hasText('second|untouched');
     assert.dom('#item-1').hasText('edited|touched');
 
+    const beforeInsertRenderCount = arrayRenderCount;
     form.insertFieldValue('items', 0, { label: 'inserted' });
     await settled();
+    assert.true(
+      arrayRenderCount > beforeInsertRenderCount,
+      'length changes invalidate array structure',
+    );
     assert.dom('#item-0').hasText('inserted|untouched');
     assert.dom('#item-2').hasText('edited|touched');
 
@@ -251,11 +261,16 @@ module('Integration | createForm v2', function (hooks) {
     await settled();
     assert.dom('#item-1').hasText('edited|touched');
 
+    const beforeReplacementRenderCount = arrayRenderCount;
     form.setFieldValue('items', [
       { label: 'replacement-a' },
       { label: 'replacement-b' },
     ]);
     await settled();
+    assert.true(
+      arrayRenderCount > beforeReplacementRenderCount,
+      'same-length replacement invalidates array structure by version',
+    );
     assert.dom('#array-length').hasText('2');
     assert.dom('#item-0').hasText('replacement-a|untouched');
     assert.dom('#item-1').hasText('replacement-b|touched');
