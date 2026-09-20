@@ -224,7 +224,10 @@ module('Integration | createForm v2', function (hooks) {
     </template>);
 
     const initialArrayRenderCount = arrayRenderCount;
-    form.setFieldValue('items[0].label', 'edited');
+    form.setFieldValue('items[0].label', 'edited', {
+      markAsDirty: false,
+      markAsTouched: false,
+    });
     await settled();
     assert.dom('#item-0').hasText('edited|untouched');
     assert.strictEqual(
