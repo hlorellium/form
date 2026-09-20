@@ -14,10 +14,7 @@ export type {
   EmberFormApi,
   EmberSubscribeSignature,
 } from './form-api-types.ts'
-export type {
-  Selection,
-  SelectorSource,
-} from './-private/select-atom.ts'
+export type { Selection, SelectorSource } from './-private/select-atom.ts'
 export type { EmberFormType } from './form-type.ts'
 export type {
   FormErrorTypes,

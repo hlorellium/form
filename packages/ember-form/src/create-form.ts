@@ -17,9 +17,6 @@ export function createForm<
 >(
   parent: object,
   options: FormOptions<TFormData, TFormValidators, TSubmitReturn, unknown>,
-): EmberFormApi<
-  TFormData,
-  ToFormErrorTypes<TFormValidators, TSubmitReturn>
-> {
+): EmberFormApi<TFormData, ToFormErrorTypes<TFormValidators, TSubmitReturn>> {
   return createInternalForm(parent, options, initializeForm) as never
 }

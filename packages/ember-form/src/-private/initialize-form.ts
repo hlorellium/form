@@ -4,16 +4,11 @@ import Field from '../components/field.gts'
 import Subscribe from '../components/subscribe.gts'
 
 import type { FormOptions } from '@tanstack/form-core'
-import type {
-  AnyInternalFormApi,
-} from '@tanstack/form-core/internals'
-import type {
-  EmberTanStackFormComponents,
-} from '../form-api-types.ts'
+import type { AnyInternalFormApi } from '@tanstack/form-core/internals'
+import type { EmberTanStackFormComponents } from '../form-api-types.ts'
 
 export interface InternalEmberFormApi
-  extends AnyInternalFormApi,
-    EmberTanStackFormComponents<any, any, any> {}
+  extends AnyInternalFormApi, EmberTanStackFormComponents<any, any, any> {}
 
 export function attachEmberFormComponents(
   form: AnyInternalFormApi,

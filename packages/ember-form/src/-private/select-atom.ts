@@ -1,21 +1,21 @@
-import { isDestroyed, isDestroying, registerDestructor } from '@ember/destroyable'
+import {
+  isDestroyed,
+  isDestroying,
+  registerDestructor,
+} from '@ember/destroyable'
 import { trackedObject } from '@ember/reactive/collections'
 import { shallow } from '@tanstack/store'
 
 export interface SelectorSource<TValue> {
   get(): TValue
-  subscribe(
-    listener: (value: TValue) => void,
-  ): { unsubscribe(): void }
+  subscribe(listener: (value: TValue) => void): { unsubscribe(): void }
 }
 
 export interface Selection<TSelected> {
   readonly current: TSelected
 }
 
-export class AtomSelection<TSource, TSelected>
-  implements Selection<TSelected>
-{
+export class AtomSelection<TSource, TSelected> implements Selection<TSelected> {
   readonly #parent: object
   #source: SelectorSource<TSource>
   #selector: (value: TSource) => TSelected

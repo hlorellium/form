@@ -4,10 +4,7 @@ import type {
   FormValidators,
   ToFormErrorTypes,
 } from '@tanstack/form-core'
-import type {
-  EmberFieldComponents,
-  EmberFormApi,
-} from './form-api-types.ts'
+import type { EmberFieldComponents, EmberFormApi } from './form-api-types.ts'
 
 type EmberFormTypeErrorTypes<
   TFormValidators extends FormValidators<any>,

@@ -23,13 +23,7 @@ export type EmberFieldApi<
   TFormData,
   TFormErrorTypes extends FormErrorTypes,
   TFieldComponents extends EmberFieldComponents,
-> = FieldApi<
-  TFieldName,
-  TFieldValue,
-  TFieldError,
-  TFormData,
-  TFormErrorTypes
-> &
+> = FieldApi<TFieldName, TFieldValue, TFieldError, TFormData, TFormErrorTypes> &
   TFieldComponents
 
 export interface EmberFormFieldComponent<
@@ -70,11 +64,7 @@ export interface EmberFormFieldComponent<
         field: EmberFieldApi<
           TFieldName,
           DeepValue<TFormData, TFieldName>,
-          ToFieldError<
-            NoInfer<TFieldValidators>,
-            never,
-            TFormErrorTypes
-          >,
+          ToFieldError<NoInfer<TFieldValidators>, never, TFormErrorTypes>,
           TFormData,
           TFormErrorTypes,
           TFieldComponents
@@ -91,16 +81,12 @@ export interface EmberFormSubscribeComponent<
   new <const TSelected>(
     owner: unknown,
     args: {
-      selector: (
-        value: FormState<TFormData, TFormErrorTypes>,
-      ) => TSelected
+      selector: (value: FormState<TFormData, TFormErrorTypes>) => TSelected
       when?: (selected: NoInfer<TSelected>) => boolean
     },
   ): Component<{
     Args: {
-      selector: (
-        value: FormState<TFormData, TFormErrorTypes>,
-      ) => TSelected
+      selector: (value: FormState<TFormData, TFormErrorTypes>) => TSelected
       when?: (selected: NoInfer<TSelected>) => boolean
     }
     Blocks: { default: [selected: TSelected] }
@@ -128,11 +114,7 @@ export interface EmberTanStackFormComponents<
   TFormErrorTypes extends FormErrorTypes,
   TFieldComponents extends EmberFieldComponents,
 > {
-  Field: EmberFormFieldComponent<
-    TFormData,
-    TFormErrorTypes,
-    TFieldComponents
-  >
+  Field: EmberFormFieldComponent<TFormData, TFormErrorTypes, TFieldComponents>
   Subscribe: EmberFormSubscribeComponent<TFormData, TFormErrorTypes>
 }
 
