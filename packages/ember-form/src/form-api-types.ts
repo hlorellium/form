@@ -3,6 +3,7 @@ import type { ComponentLike } from '@glint/template'
 import type {
   AnyFormApi,
   DeepKeys,
+  DeepKeysWhereValueIncludes,
   DeepValue,
   FieldApi,
   FieldApiOptions,
@@ -33,6 +34,57 @@ export interface EmberFormFieldComponent<
 > {
   new <
     TFieldName extends DeepKeys<TFormData>,
+    const TFieldValidators extends FieldValidators<
+      TFormData,
+      TFieldName,
+      DeepValue<TFormData, TFieldName>
+    >,
+  >(
+    owner: unknown,
+    args: FieldApiOptions<
+      TFormData,
+      TFieldName,
+      DeepValue<TFormData, TFieldName>,
+      TFieldValidators,
+      never,
+      TFormData,
+      TFormErrorTypes
+    >,
+  ): Component<{
+    Args: FieldApiOptions<
+      TFormData,
+      TFieldName,
+      DeepValue<TFormData, TFieldName>,
+      TFieldValidators,
+      never,
+      TFormData,
+      TFormErrorTypes
+    >
+    Blocks: {
+      default: [
+        field: EmberFieldApi<
+          TFieldName,
+          DeepValue<TFormData, TFieldName>,
+          ToFieldError<NoInfer<TFieldValidators>, never, TFormErrorTypes>,
+          TFormData,
+          TFormErrorTypes,
+          TFieldComponents
+        >,
+      ]
+    }
+  }>
+}
+
+export interface EmberFormArrayFieldComponent<
+  TFormData,
+  TFormErrorTypes extends FormErrorTypes,
+  TFieldComponents extends EmberFieldComponents,
+> {
+  new <
+    TFieldName extends DeepKeysWhereValueIncludes<
+      TFormData,
+      ReadonlyArray<any>
+    >,
     const TFieldValidators extends FieldValidators<
       TFormData,
       TFieldName,
@@ -115,6 +167,11 @@ export interface EmberTanStackFormComponents<
   TFieldComponents extends EmberFieldComponents,
 > {
   Field: EmberFormFieldComponent<TFormData, TFormErrorTypes, TFieldComponents>
+  ArrayField: EmberFormArrayFieldComponent<
+    TFormData,
+    TFormErrorTypes,
+    TFieldComponents
+  >
   Subscribe: EmberFormSubscribeComponent<TFormData, TFormErrorTypes>
 }
 

@@ -14,6 +14,8 @@ export type {
   EmberFieldApi,
   EmberFieldComponents,
   EmberFormApi,
+  EmberFormArrayFieldComponent,
+  EmberFormFieldComponent,
   EmberSubscribeSignature,
 } from './form-api-types.ts'
 export type { Selection, SelectorSource } from './-private/select-atom.ts'

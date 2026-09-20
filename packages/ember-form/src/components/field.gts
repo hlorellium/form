@@ -19,12 +19,7 @@ export default class Field extends Component<InternalFieldSignature> {
   #name: unknown;
   #resetVersion: number | undefined;
   #resetSelection: AtomSelection<number, number> | undefined;
-  #fieldSelection:
-    | AtomSelection<
-        any,
-        { value: unknown; meta: unknown }
-      >
-    | undefined;
+  #fieldSelection: AtomSelection<any, unknown> | undefined;
   #field: AnyInternalFieldApi | undefined;
   #unregister: (() => void) | undefined;
 
@@ -35,6 +30,10 @@ export default class Field extends Component<InternalFieldSignature> {
 
   get form(): AnyInternalFormApi {
     throw new Error('Field must be bound to an Ember form instance');
+  }
+
+  protected get snapshotSelector(): (snapshot: unknown) => unknown {
+    return selectFieldSnapshot;
   }
 
   /**
@@ -80,10 +79,13 @@ export default class Field extends Component<InternalFieldSignature> {
         this.#fieldSelection = new AtomSelection(
           this,
           this.#field.atom,
-          selectFieldSnapshot,
+          this.snapshotSelector,
         );
       } else {
-        this.#fieldSelection.update(this.#field.atom, selectFieldSnapshot);
+        this.#fieldSelection.update(
+          this.#field.atom,
+          this.snapshotSelector,
+        );
       }
     } else {
       this.#field!._update(options, 'field');
