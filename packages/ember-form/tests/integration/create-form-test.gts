@@ -74,25 +74,40 @@ interface GroupBindingsSignature {
 class GroupBindings extends Component<GroupBindingsSignature> {
   @tracked showGroup = true;
   @tracked allowSubmit = false;
-  @tracked submitted: GuestDetails | undefined;
+  @tracked submittedBy = '';
+
+  invalidValidators: FormGroupValidators<GuestDetails> = [
+    {
+      triggers: [],
+      run: () => ({ fields: { name: 'Group name is required' } }),
+    },
+  ];
+
+  validValidators: FormGroupValidators<GuestDetails> = [
+    { triggers: [], run: () => null },
+  ];
 
   get validators(): FormGroupValidators<GuestDetails> {
-    return [
-      {
-        triggers: [],
-        run: () =>
-          this.allowSubmit
-            ? null
-            : { fields: { name: 'Group name is required' } },
-      },
-    ];
+    return this.allowSubmit
+      ? this.validValidators
+      : this.invalidValidators;
+  }
+
+  get submitHandler(): (context: { value: GuestDetails }) => void {
+    return this.allowSubmit
+      ? this.updatedSubmit
+      : this.initialSubmit;
   }
 
   selectAttempts = (state: { submissionAttempts: number }): number =>
     state.submissionAttempts;
 
-  onSubmit = ({ value }: { value: GuestDetails }): void => {
-    this.submitted = value;
+  initialSubmit = ({ value }: { value: GuestDetails }): void => {
+    this.submittedBy = `initial:${value.name}`;
+  };
+
+  updatedSubmit = ({ value }: { value: GuestDetails }): void => {
+    this.submittedBy = `updated:${value.name}`;
   };
 
   enableSubmit = (): void => {
@@ -112,9 +127,11 @@ class GroupBindings extends Component<GroupBindingsSignature> {
       <this.args.form.FormGroup
         @name="guestDetails"
         @validators={{this.validators}}
-        @onSubmit={{this.onSubmit}}
+        @onSubmit={{this.submitHandler}}
         as |group|
       >
+        <output id="group-state-name">{{group.state.values.name}}</output>
+
         <group.Field @name="name" as |field|>
           <input
             id="group-name"
@@ -157,7 +174,7 @@ class GroupBindings extends Component<GroupBindingsSignature> {
       <output id="root-group-field">{{field.value}}</output>
       <output id="root-group-errors">{{field.errors.length}}</output>
     </this.args.form.Field>
-    <output id="group-submitted">{{this.submitted.name}}</output>
+    <output id="group-submitted">{{this.submittedBy}}</output>
 
     <button id="enable-group-submit" type="button" {{on "click" this.enableSubmit}}>
       Enable submit
@@ -430,9 +447,14 @@ module('Integration | createForm v2', function (hooks) {
 
     await click('#enable-group-submit');
     await fillIn('#group-name', 'Grace');
+    assert
+      .dom('#group-state-name')
+      .hasText('Grace', 'yielded group state reacts to core value changes');
     await click('#group-submit');
     assert.dom('.group-error').doesNotExist();
-    assert.dom('#group-submitted').hasText('Grace');
+    assert
+      .dom('#group-submitted')
+      .hasText('updated:Grace', 'the replaced submit callback is used');
     assert.deepEqual(
       form.state.values.guestDetails,
       {
