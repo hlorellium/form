@@ -4,6 +4,7 @@ import {
   registerDestructor,
 } from '@ember/destroyable'
 import { trackedObject } from '@ember/reactive/collections'
+import { cancel, schedule } from '@ember/runloop'
 import { shallow } from '@tanstack/store'
 
 export interface SelectorSource<TValue> {
@@ -21,7 +22,7 @@ export class AtomSelection<TSource, TSelected> implements Selection<TSelected> {
   #selector: (value: TSource) => TSelected
   #selected: TSelected
   #unsubscribe: (() => void) | undefined
-  #scheduled = false
+  #scheduled: ReturnType<typeof schedule> | undefined
   #destroyed = false
   #revision = trackedObject({ current: 0 })
 
@@ -62,6 +63,10 @@ export class AtomSelection<TSource, TSelected> implements Selection<TSelected> {
     this.#destroyed = true
     this.#unsubscribe?.()
     this.#unsubscribe = undefined
+    if (this.#scheduled !== undefined) {
+      cancel(this.#scheduled)
+      this.#scheduled = undefined
+    }
   }
 
   #subscribe(): void {
@@ -85,11 +90,10 @@ export class AtomSelection<TSource, TSelected> implements Selection<TSelected> {
   }
 
   #scheduleInvalidation(): void {
-    if (this.#scheduled) return
-    this.#scheduled = true
+    if (this.#scheduled !== undefined) return
 
-    queueMicrotask(() => {
-      this.#scheduled = false
+    this.#scheduled = schedule('afterRender', () => {
+      this.#scheduled = undefined
       if (
         this.#destroyed ||
         isDestroying(this.#parent) ||

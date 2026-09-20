@@ -30,7 +30,7 @@ export default class Field extends Component<InternalFieldSignature> {
 
   constructor(owner: Owner, args: InternalFieldSignature['Args']) {
     super(owner, args);
-    registerDestructor(this, () => this.#unregister?.());
+    registerDestructor(this, () => this.#releaseField());
   }
 
   get form(): AnyInternalFormApi {
@@ -68,7 +68,7 @@ export default class Field extends Component<InternalFieldSignature> {
       resetVersion !== this.#resetVersion;
 
     if (shouldResolve) {
-      this.#unregister?.();
+      this.#releaseField();
       this.#field = form._getOrCreateFieldApi(
         { ...options, name },
         'field',
@@ -95,6 +95,12 @@ export default class Field extends Component<InternalFieldSignature> {
     void this.#fieldSelection?.current;
 
     return this.#field!;
+  }
+
+  #releaseField(): void {
+    const unregister = this.#unregister;
+    this.#unregister = undefined;
+    unregister?.();
   }
 
   <template>{{yield this.field}}</template>
