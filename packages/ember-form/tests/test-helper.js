@@ -18,13 +18,16 @@ class TestApp extends EmberApp {
 }
 
 Router.map(function () {})
-setTesting(true)
-setApplication(
-  TestApp.create({
-    autoboot: false,
-    rootElement: '#ember-testing',
-  }),
-)
-setup(QUnit.assert)
-setupEmberOnerrorValidation()
-qunitStart()
+
+export function start() {
+  setTesting(true)
+  setApplication(
+    TestApp.create({
+      autoboot: false,
+      rootElement: '#ember-testing',
+    }),
+  )
+  setup(QUnit.assert)
+  setupEmberOnerrorValidation()
+  qunitStart()
+}
