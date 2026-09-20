@@ -2,6 +2,7 @@ import Component from '@glimmer/component';
 import { registerDestructor } from '@ember/destroyable';
 import { AtomSelection } from '../-private/select-atom.ts';
 
+import type Owner from '@ember/owner';
 import type { FieldApiOptions } from '@tanstack/form-core';
 import type {
   AnyInternalFieldApi,
@@ -27,7 +28,7 @@ export default class Field extends Component<InternalFieldSignature> {
   #field: AnyInternalFieldApi | undefined;
   #unregister: (() => void) | undefined;
 
-  constructor(owner: unknown, args: InternalFieldSignature['Args']) {
+  constructor(owner: Owner, args: InternalFieldSignature['Args']) {
     super(owner, args);
     registerDestructor(this, () => this.#unregister?.());
   }

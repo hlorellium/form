@@ -46,20 +46,12 @@ module('Integration | createForm v2', function (hooks) {
       defaultValues: { name: '', email: '' } as Profile,
     });
 
-    this.setProperties({
-      form,
-      handleInput,
-      required,
-      selectName,
-      whenPresent,
-    });
-
     await render(<template>
-      <form.Field @name="name" @validators={{this.required}} as |field|>
+      <form.Field @name="name" @validators={{required}} as |field|>
         <input
           id="name"
           value={{field.value}}
-          {{on "input" (fn this.handleInput field)}}
+          {{on "input" (fn handleInput field)}}
         />
         <output id="field-value">{{field.value}}</output>
         {{#each field.errors as |error|}}
@@ -68,8 +60,8 @@ module('Integration | createForm v2', function (hooks) {
       </form.Field>
 
       <form.Subscribe
-        @selector={{this.selectName}}
-        @when={{this.whenPresent}}
+        @selector={{selectName}}
+        @when={{whenPresent}}
         as |name|
       >
         <output id="selected">{{name}}</output>
