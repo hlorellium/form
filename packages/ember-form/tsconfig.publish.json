@@ -5,10 +5,6 @@
     "allowJs": true,
     "declarationDir": "declarations",
     "rootDir": "./src",
-    "types": ["ember-source/types", "@glint/ember-tsc/types"],
-    "paths": {
-      "@tanstack/form-core": ["../form-core/src/index.ts"],
-      "@tanstack/form-core/internals": ["../form-core/src/internals.ts"]
-    }
+    "types": ["ember-source/types", "@glint/ember-tsc/types"]
   }
 }
