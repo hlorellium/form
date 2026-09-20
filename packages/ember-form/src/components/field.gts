@@ -36,6 +36,10 @@ export default class Field extends Component<InternalFieldSignature> {
     return selectFieldSnapshot;
   }
 
+  protected get fieldOptions(): InternalFieldSignature['Args'] {
+    return this.args;
+  }
+
   /**
    * Reading the binding is the Ember observation point for tracked arguments.
    * Core registration may synchronously update atoms here; AtomSelection keeps
@@ -58,7 +62,7 @@ export default class Field extends Component<InternalFieldSignature> {
     }
 
     const resetVersion = this.#resetSelection.current;
-    const { name, ...options } = this.args;
+    const { name, ...options } = this.fieldOptions;
     const shouldResolve =
       this.#field === undefined ||
       this.#field._isKilled ||

@@ -2,6 +2,7 @@ import { registerDestructor } from '@ember/destroyable'
 import { InternalFormApi } from '@tanstack/form-core/internals'
 import ArrayField from '../components/array-field.gts'
 import Field from '../components/field.gts'
+import FormGroup from '../components/form-group.gts'
 import Subscribe from '../components/subscribe.gts'
 
 import type { FormOptions } from '@tanstack/form-core'
@@ -31,6 +32,12 @@ export function attachEmberFormComponents(
   emberForm.Subscribe = class BoundSubscribe extends Subscribe {
     override get source() {
       return form.atom
+    }
+  } as never
+
+  emberForm.FormGroup = class BoundFormGroup extends FormGroup {
+    override get form(): AnyInternalFormApi {
+      return form
     }
   } as never
 

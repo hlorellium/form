@@ -10,8 +10,13 @@ import type {
   FieldValidators,
   FormApi,
   FormErrorTypes,
+  FormGroupApi,
+  FormGroupOptions,
+  FormGroupState,
+  FormGroupValidators,
   FormState,
   ToFieldError,
+  ToFormGroupErrorTypes,
 } from '@tanstack/form-core'
 import type { SelectorSource } from './-private/select-atom.ts'
 
@@ -161,6 +166,218 @@ export interface EmberSubscribeComponent {
   ): Component<EmberSubscribeSignature<TSource, TSelected>>
 }
 
+export interface EmberFormGroupFieldComponent<
+  TFormData,
+  TGroupValue,
+  TGroupErrorTypes extends FormErrorTypes,
+  TFormErrorTypes extends FormErrorTypes,
+  TFieldComponents extends EmberFieldComponents,
+> {
+  new <
+    TFieldName extends DeepKeys<TGroupValue>,
+    const TFieldValidators extends FieldValidators<
+      TGroupValue,
+      TFieldName,
+      DeepValue<TGroupValue, TFieldName>
+    >,
+  >(
+    owner: unknown,
+    args: FieldApiOptions<
+      TGroupValue,
+      TFieldName,
+      DeepValue<TGroupValue, TFieldName>,
+      TFieldValidators,
+      TGroupErrorTypes['fieldError'],
+      TFormData,
+      TFormErrorTypes
+    >,
+  ): Component<{
+    Args: FieldApiOptions<
+      TGroupValue,
+      TFieldName,
+      DeepValue<TGroupValue, TFieldName>,
+      TFieldValidators,
+      TGroupErrorTypes['fieldError'],
+      TFormData,
+      TFormErrorTypes
+    >
+    Blocks: {
+      default: [
+        field: EmberFieldApi<
+          TFieldName,
+          DeepValue<TGroupValue, TFieldName>,
+          ToFieldError<
+            NoInfer<TFieldValidators>,
+            TGroupErrorTypes['fieldError'],
+            TFormErrorTypes
+          >,
+          TFormData,
+          TFormErrorTypes,
+          TFieldComponents
+        >,
+      ]
+    }
+  }>
+}
+
+export interface EmberFormGroupArrayFieldComponent<
+  TFormData,
+  TGroupValue,
+  TGroupErrorTypes extends FormErrorTypes,
+  TFormErrorTypes extends FormErrorTypes,
+  TFieldComponents extends EmberFieldComponents,
+> {
+  new <
+    TFieldName extends DeepKeysWhereValueIncludes<
+      TGroupValue,
+      ReadonlyArray<any>
+    >,
+    const TFieldValidators extends FieldValidators<
+      TGroupValue,
+      TFieldName,
+      DeepValue<TGroupValue, TFieldName>
+    >,
+  >(
+    owner: unknown,
+    args: FieldApiOptions<
+      TGroupValue,
+      TFieldName,
+      DeepValue<TGroupValue, TFieldName>,
+      TFieldValidators,
+      TGroupErrorTypes['fieldError'],
+      TFormData,
+      TFormErrorTypes
+    >,
+  ): Component<{
+    Args: FieldApiOptions<
+      TGroupValue,
+      TFieldName,
+      DeepValue<TGroupValue, TFieldName>,
+      TFieldValidators,
+      TGroupErrorTypes['fieldError'],
+      TFormData,
+      TFormErrorTypes
+    >
+    Blocks: {
+      default: [
+        field: EmberFieldApi<
+          TFieldName,
+          DeepValue<TGroupValue, TFieldName>,
+          ToFieldError<
+            NoInfer<TFieldValidators>,
+            TGroupErrorTypes['fieldError'],
+            TFormErrorTypes
+          >,
+          TFormData,
+          TFormErrorTypes,
+          TFieldComponents
+        >,
+      ]
+    }
+  }>
+}
+
+export interface EmberFormGroupSubscribeComponent<
+  TGroupValue,
+  TGroupErrorTypes extends FormErrorTypes,
+> {
+  new <const TSelected>(
+    owner: unknown,
+    args: {
+      selector: (
+        value: FormGroupState<TGroupValue, TGroupErrorTypes>
+      ) => TSelected
+      when?: (selected: NoInfer<TSelected>) => boolean
+    },
+  ): Component<{
+    Args: {
+      selector: (
+        value: FormGroupState<TGroupValue, TGroupErrorTypes>
+      ) => TSelected
+      when?: (selected: NoInfer<TSelected>) => boolean
+    }
+    Blocks: { default: [selected: TSelected] }
+  }>
+}
+
+export interface EmberFormGroupApi<
+  TFormData,
+  TGroupName,
+  TGroupValue,
+  TGroupErrorTypes extends FormErrorTypes,
+  TFormErrorTypes extends FormErrorTypes,
+  TFieldComponents extends EmberFieldComponents,
+> extends FormGroupApi<
+    TFormData,
+    TGroupName,
+    TGroupValue,
+    TGroupErrorTypes,
+    TFormErrorTypes
+  > {
+  Field: EmberFormGroupFieldComponent<
+    TFormData,
+    TGroupValue,
+    TGroupErrorTypes,
+    TFormErrorTypes,
+    TFieldComponents
+  >
+  ArrayField: EmberFormGroupArrayFieldComponent<
+    TFormData,
+    TGroupValue,
+    TGroupErrorTypes,
+    TFormErrorTypes,
+    TFieldComponents
+  >
+  Subscribe: EmberFormGroupSubscribeComponent<TGroupValue, TGroupErrorTypes>
+}
+
+export interface EmberFormGroupComponent<
+  TFormData,
+  TFormErrorTypes extends FormErrorTypes,
+  TFieldComponents extends EmberFieldComponents,
+> {
+  new <
+    TGroupName extends DeepKeys<TFormData>,
+    TGroupValue extends DeepValue<TFormData, TGroupName>,
+    const TGroupValidators extends FormGroupValidators<TGroupValue>,
+  >(
+    owner: unknown,
+    args: Omit<
+      FormGroupOptions<
+        TFormData,
+        TGroupName,
+        TGroupValue,
+        TGroupValidators,
+        TFormErrorTypes
+      >,
+      'form'
+    >,
+  ): Component<{
+    Args: Omit<
+      FormGroupOptions<
+        TFormData,
+        TGroupName,
+        TGroupValue,
+        TGroupValidators,
+        TFormErrorTypes
+      >,
+      'form'
+    >
+    Blocks: {
+      default: [
+        group: EmberFormGroupApi<
+          TFormData,
+          TGroupName,
+          TGroupValue,
+          ToFormGroupErrorTypes<NoInfer<TGroupValidators>>,
+          TFormErrorTypes,
+          TFieldComponents
+        >,
+      ]
+    }
+  }>
+}
+
 export interface EmberTanStackFormComponents<
   TFormData,
   TFormErrorTypes extends FormErrorTypes,
@@ -173,6 +390,11 @@ export interface EmberTanStackFormComponents<
     TFieldComponents
   >
   Subscribe: EmberFormSubscribeComponent<TFormData, TFormErrorTypes>
+  FormGroup: EmberFormGroupComponent<
+    TFormData,
+    TFormErrorTypes,
+    TFieldComponents
+  >
 }
 
 export type EmberFormApi<

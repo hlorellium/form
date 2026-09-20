@@ -8,6 +8,7 @@ import {
   createForm,
   useSelector,
   type EmberFormType,
+  type FormGroupValidators,
 } from '@tanstack/ember-form';
 import { formOptions } from '@tanstack/form-core';
 import {
@@ -43,6 +44,132 @@ const arrayOptions = formOptions({
 type ArrayForm = EmberFormType<typeof arrayOptions>;
 
 let arrayRenderCount = 0;
+
+interface GroupFormValues {
+  guestDetails: {
+    name: string;
+    tags: Array<{ label: string }>;
+    address: { city: string };
+  };
+}
+
+type GuestDetails = GroupFormValues['guestDetails'];
+
+const groupOptions = formOptions({
+  defaultValues: {
+    guestDetails: {
+      name: '',
+      tags: [{ label: 'first' }],
+      address: { city: 'London' },
+    },
+  } as GroupFormValues,
+});
+
+type GroupForm = EmberFormType<typeof groupOptions>;
+
+interface GroupBindingsSignature {
+  Args: { form: GroupForm };
+}
+
+class GroupBindings extends Component<GroupBindingsSignature> {
+  @tracked showGroup = true;
+  @tracked allowSubmit = false;
+  @tracked submitted: GuestDetails | undefined;
+
+  get validators(): FormGroupValidators<GuestDetails> {
+    return [
+      {
+        triggers: [],
+        run: () =>
+          this.allowSubmit
+            ? null
+            : { fields: { name: 'Group name is required' } },
+      },
+    ];
+  }
+
+  selectAttempts = (state: { submissionAttempts: number }): number =>
+    state.submissionAttempts;
+
+  onSubmit = ({ value }: { value: GuestDetails }): void => {
+    this.submitted = value;
+  };
+
+  enableSubmit = (): void => {
+    this.allowSubmit = true;
+  };
+
+  disableSubmit = (): void => {
+    this.allowSubmit = false;
+  };
+
+  hideGroup = (): void => {
+    this.showGroup = false;
+  };
+
+  <template>
+    {{#if this.showGroup}}
+      <this.args.form.FormGroup
+        @name="guestDetails"
+        @validators={{this.validators}}
+        @onSubmit={{this.onSubmit}}
+        as |group|
+      >
+        <group.Field @name="name" as |field|>
+          <input
+            id="group-name"
+            value={{field.value}}
+            {{on "input" (fn handleInput field)}}
+          />
+          <output id="group-field">{{field.name}}:{{field.value}}</output>
+          {{#each field.errors as |error|}}
+            <em class="group-error">{{error.message}}</em>
+          {{/each}}
+        </group.Field>
+
+        <group.ArrayField @name="tags" as |field|>
+          <output id="group-array">{{field.name}}:{{field.value.length}}</output>
+        </group.ArrayField>
+
+        <group.Subscribe @selector={{this.selectAttempts}} as |attempts|>
+          <output id="group-attempts">{{attempts}}</output>
+        </group.Subscribe>
+
+        <this.args.form.FormGroup
+          @name="guestDetails.address"
+          as |nestedGroup|
+        >
+          <nestedGroup.Field @name="city" as |field|>
+            <output id="nested-field">{{field.name}}:{{field.value}}</output>
+          </nestedGroup.Field>
+        </this.args.form.FormGroup>
+
+        <button id="group-submit" type="button" {{on "click" group.handleSubmit}}>
+          Continue
+        </button>
+        <button id="group-reset" type="button" {{on "click" group.reset}}>
+          Reset
+        </button>
+      </this.args.form.FormGroup>
+    {{/if}}
+
+    <this.args.form.Field @name="guestDetails.name" as |field|>
+      <output id="root-group-field">{{field.value}}</output>
+      <output id="root-group-errors">{{field.errors.length}}</output>
+    </this.args.form.Field>
+    <output id="group-submitted">{{this.submitted.name}}</output>
+
+    <button id="enable-group-submit" type="button" {{on "click" this.enableSubmit}}>
+      Enable submit
+    </button>
+    <button id="disable-group-submit" type="button" {{on "click" this.disableSubmit}}>
+      Disable submit
+    </button>
+    <button id="hide-group" type="button" {{on "click" this.hideGroup}}>
+      Hide group
+    </button>
+  </template>
+}
 
 interface ArrayRenderProbeSignature {
   Args: { value: Array<ArrayItem> };
@@ -279,6 +406,56 @@ module('Integration | createForm v2', function (hooks) {
     await settled();
     assert.dom('#item-0').hasText('first|untouched');
     assert.dom('#item-1').hasText('second|untouched');
+
+    destroy(owner);
+  });
+
+  test('binds scoped form groups to core state, submission, nesting, updates, reset, and cleanup', async function (assert) {
+    const owner = {};
+    const form = createForm(owner, groupOptions);
+
+    await render(<template><GroupBindings @form={{form}} /></template>);
+
+    assert.dom('#group-field').hasText('guestDetails.name:');
+    assert.dom('#group-array').hasText('guestDetails.tags:1');
+    assert
+      .dom('#nested-field')
+      .hasText('guestDetails.address.city:London');
+    assert.dom('#group-attempts').hasText('0');
+
+    await click('#group-submit');
+    assert.dom('.group-error').hasText('Group name is required');
+    assert.dom('#root-group-errors').hasText('1');
+    assert.dom('#group-attempts').hasText('1');
+
+    await click('#enable-group-submit');
+    await fillIn('#group-name', 'Grace');
+    await click('#group-submit');
+    assert.dom('.group-error').doesNotExist();
+    assert.dom('#group-submitted').hasText('Grace');
+    assert.deepEqual(
+      form.state.values.guestDetails,
+      {
+        name: 'Grace',
+        tags: [{ label: 'first' }],
+        address: { city: 'London' },
+      },
+      'group submission keeps values scoped to the core form',
+    );
+    assert.dom('#group-attempts').hasText('2');
+
+    await click('#group-reset');
+    assert.dom('#group-field').hasText('guestDetails.name:');
+    assert.dom('#group-attempts').hasText('0');
+
+    await fillIn('#group-name', 'Preserved');
+    await click('#disable-group-submit');
+    await click('#group-submit');
+    assert.dom('#root-group-errors').hasText('1');
+
+    await click('#hide-group');
+    assert.dom('#root-group-field').hasText('Preserved');
+    assert.dom('#root-group-errors').hasText('0');
 
     destroy(owner);
   });
