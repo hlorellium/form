@@ -1,3 +1,5 @@
+import type { FieldValidators } from '@tanstack/form-core'
+
 export interface Profile {
   name: string
   email: string
@@ -15,9 +17,9 @@ export const selectName = (state: { values: Profile }): string =>
 
 export const whenPresent = (value: string): boolean => value.length > 0
 
-export const required = [
+export const required: FieldValidators<Profile, 'name', string> = [
   {
-    triggers: ['change'] as const,
+    triggers: ['change'],
     run: ({ value }: { value: string }) =>
       value.length === 0 ? 'Name is required' : undefined,
   },

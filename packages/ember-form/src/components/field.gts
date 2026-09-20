@@ -21,7 +21,7 @@ export default class Field extends Component<InternalFieldSignature> {
   #resetSelection: AtomSelection<number, number> | undefined;
   #fieldSelection:
     | AtomSelection<
-        unknown,
+        any,
         { value: unknown; meta: unknown }
       >
     | undefined;
@@ -81,7 +81,7 @@ export default class Field extends Component<InternalFieldSignature> {
         this.#fieldSelection.update(this.#field.atom, selectFieldState);
       }
     } else {
-      this.#field._update(options, 'field');
+      this.#field!._update(options, 'field');
     }
 
     this.#form = form;
@@ -89,7 +89,7 @@ export default class Field extends Component<InternalFieldSignature> {
     this.#resetVersion = resetVersion;
     void this.#fieldSelection?.current;
 
-    return this.#field;
+    return this.#field!;
   }
 
   <template>{{yield this.field}}</template>

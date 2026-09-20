@@ -29,7 +29,7 @@ class ProfileFields extends Component<ProfileFieldsSignature> {
 
     {{! @glint-expect-error unknown field path }}
     <this.args.form.Field @name="profile.missing" as |field|>
-      {{field.value}}
+      {{field.name}}
     </this.args.form.Field>
   </template>
 }
