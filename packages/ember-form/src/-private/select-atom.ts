@@ -66,6 +66,13 @@ export class AtomSelection<TSource, TSelected>
 
   #subscribe(): void {
     const subscription = this.#source.subscribe((value) => {
+      if (
+        this.#destroyed ||
+        isDestroying(this.#parent) ||
+        isDestroyed(this.#parent)
+      ) {
+        return
+      }
       this.#setSelected(this.#selector(value))
     })
     this.#unsubscribe = () => subscription.unsubscribe()
