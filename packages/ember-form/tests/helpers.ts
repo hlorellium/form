@@ -1,0 +1,24 @@
+export interface Profile {
+  name: string
+  email: string
+}
+
+export function handleInput(
+  field: { handleChange: (value: string) => void },
+  event: Event,
+): void {
+  field.handleChange((event.target as HTMLInputElement).value)
+}
+
+export const selectName = (state: { values: Profile }): string =>
+  state.values.name
+
+export const whenPresent = (value: string): boolean => value.length > 0
+
+export const required = [
+  {
+    triggers: ['change'] as const,
+    run: ({ value }: { value: string }) =>
+      value.length === 0 ? 'Name is required' : undefined,
+  },
+]
