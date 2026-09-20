@@ -10,6 +10,7 @@ const profileOptions = formOptions({
     profile: {
       name: '',
       age: 0,
+      tags: [{ label: '' }],
     },
   },
 });
@@ -34,6 +35,18 @@ class ProfileFields extends Component<ProfileFieldsSignature> {
     <this.args.form.Field @name="profile.missing" as |field|>
       {{field.name}}
     </this.args.form.Field>
+
+    <this.args.form.ArrayField @name="profile.tags" as |field|>
+      {{field.value.length}}
+      {{field.pushValue (hash label="new")}}
+      {{! @glint-expect-error array element type rejects strings }}
+      {{field.pushValue "new"}}
+    </this.args.form.ArrayField>
+
+    {{! @glint-expect-error ArrayField only accepts array values }}
+    <this.args.form.ArrayField @name="profile.name" as |field|>
+      {{field.name}}
+    </this.args.form.ArrayField>
   </template>
 }
 

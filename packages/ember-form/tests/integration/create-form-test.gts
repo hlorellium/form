@@ -26,6 +26,29 @@ type ReactiveForm = EmberFormType<typeof reactiveOptions>;
 
 const selectEmail = (state: { values: Profile }) => state.values.email;
 
+interface ArrayItem {
+  label: string;
+}
+
+interface ArrayFormValues {
+  items: Array<ArrayItem>;
+}
+
+let arrayRenderCount = 0;
+
+interface ArrayRenderProbeSignature {
+  Args: { length: number };
+}
+
+class ArrayRenderProbe extends Component<ArrayRenderProbeSignature> {
+  get length(): number {
+    arrayRenderCount++;
+    return this.args.length;
+  }
+
+  <template><output id="array-length">{{this.length}}</output></template>
+}
+
 interface ReactiveBindingsSignature {
   Args: { form: ReactiveForm };
 }
@@ -138,6 +161,79 @@ module('Integration | createForm v2', function (hooks) {
     await click('#switch');
     assert.dom('#dynamic-field').hasText('email:ada@example.com');
     assert.dom('#dynamic-selection').hasText('ada@example.com');
+
+    destroy(owner);
+  });
+
+  test('binds array structure while nested fields retain core value and metadata association', async function (assert) {
+    const owner = {};
+    const defaults: ArrayFormValues = {
+      items: [{ label: 'first' }, { label: 'second' }],
+    };
+    const form = createForm(owner, { defaultValues: defaults });
+    arrayRenderCount = 0;
+
+    await render(<template>
+      <form.ArrayField @name="items" as |arrayField|>
+        <ArrayRenderProbe @length={{arrayField.value.length}} />
+        {{#each arrayField.value as |_item index|}}
+          <form.Field
+            @name={{concat "items[" index "].label"}}
+            as |itemField|
+          >
+            <output id={{concat "item-" index}}>
+              {{itemField.value}}|{{if itemField.meta.isTouched "touched" "untouched"}}
+            </output>
+            <button
+              id={{concat "blur-" index}}
+              type="button"
+              {{on "click" itemField.handleBlur}}
+            >
+              Blur
+            </button>
+          </form.Field>
+        {{/each}}
+      </form.ArrayField>
+    </template>);
+
+    const initialArrayRenderCount = arrayRenderCount;
+    form.setFieldValue('items[0].label', 'edited');
+    await settled();
+    assert.dom('#item-0').hasText('edited|untouched');
+    assert.strictEqual(
+      arrayRenderCount,
+      initialArrayRenderCount,
+      'an item edit does not invalidate array structure',
+    );
+
+    await click('#blur-0');
+    form.moveFieldValue('items', 0, 1);
+    await settled();
+    assert.dom('#item-0').hasText('second|untouched');
+    assert.dom('#item-1').hasText('edited|touched');
+
+    form.insertFieldValue('items', 0, { label: 'inserted' });
+    await settled();
+    assert.dom('#item-0').hasText('inserted|untouched');
+    assert.dom('#item-2').hasText('edited|touched');
+
+    form.removeFieldValue('items', 1);
+    await settled();
+    assert.dom('#item-1').hasText('edited|touched');
+
+    form.setFieldValue('items', [
+      { label: 'replacement-a' },
+      { label: 'replacement-b' },
+    ]);
+    await settled();
+    assert.dom('#array-length').hasText('2');
+    assert.dom('#item-0').hasText('replacement-a|untouched');
+    assert.dom('#item-1').hasText('replacement-b|touched');
+
+    form.reset(defaults);
+    await settled();
+    assert.dom('#item-0').hasText('first|untouched');
+    assert.dom('#item-1').hasText('second|untouched');
 
     destroy(owner);
   });
