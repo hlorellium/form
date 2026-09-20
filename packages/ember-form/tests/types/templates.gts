@@ -1,6 +1,9 @@
 import Component from '@glimmer/component';
-import { createForm, type EmberFormType } from '@tanstack/ember-form';
-import { formOptions } from '@tanstack/form-core';
+import {
+  createForm,
+  formOptions,
+  type EmberFormType,
+} from '@tanstack/ember-form';
 
 const profileOptions = formOptions({
   defaultValues: {
