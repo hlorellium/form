@@ -2215,6 +2215,9 @@ importers:
       '@tanstack/form-core':
         specifier: workspace:*
         version: link:../form-core
+      '@tanstack/store':
+        specifier: ^0.11.1
+        version: 0.11.1
       decorator-transforms:
         specifier: ^2.2.2
         version: 2.4.0(@babel/core@7.29.7(supports-color@8.1.1))

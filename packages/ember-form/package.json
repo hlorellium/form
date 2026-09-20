@@ -46,6 +46,7 @@
   "dependencies": {
     "@embroider/addon-shim": "^1.8.9",
     "@tanstack/form-core": "workspace:*",
+    "@tanstack/store": "^0.11.1",
     "decorator-transforms": "^2.2.2"
   },
   "peerDependencies": {
