@@ -8,8 +8,12 @@ form.
 
 ```gts
 import Component from '@glimmer/component';
-import { createForm, useSelector, type EmberFormType } from '@tanstack/ember-form';
-import { formOptions } from '@tanstack/form-core';
+import {
+  createForm,
+  formOptions,
+  useSelector,
+  type EmberFormType,
+} from '@tanstack/ember-form';
 
 const passengerOptions = formOptions({
   defaultValues: {
