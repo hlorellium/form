@@ -34,6 +34,14 @@ interface ArrayFormValues {
   items: Array<ArrayItem>;
 }
 
+const arrayOptions = formOptions({
+  defaultValues: {
+    items: [{ label: 'first' }, { label: 'second' }],
+  } as ArrayFormValues,
+});
+
+type ArrayForm = EmberFormType<typeof arrayOptions>;
+
 let arrayRenderCount = 0;
 
 interface ArrayRenderProbeSignature {
@@ -47,6 +55,39 @@ class ArrayRenderProbe extends Component<ArrayRenderProbeSignature> {
   }
 
   <template><output id="array-length">{{this.length}}</output></template>
+}
+
+interface ArrayItemBindingSignature {
+  Args: { form: ArrayForm; index: number };
+}
+
+class ArrayItemBinding extends Component<ArrayItemBindingSignature> {
+  get name(): `items[${number}].label` {
+    return `items[${this.args.index}].label`;
+  }
+
+  get outputId(): string {
+    return `item-${this.args.index}`;
+  }
+
+  get blurId(): string {
+    return `blur-${this.args.index}`;
+  }
+
+  <template>
+    <this.args.form.Field @name={{this.name}} as |itemField|>
+      <output id={{this.outputId}}>
+        {{itemField.value}}|{{if itemField.meta.isTouched "touched" "untouched"}}
+      </output>
+      <button
+        id={{this.blurId}}
+        type="button"
+        {{on "click" itemField.handleBlur}}
+      >
+        Blur
+      </button>
+    </this.args.form.Field>
+  </template>
 }
 
 interface ReactiveBindingsSignature {
@@ -170,28 +211,14 @@ module('Integration | createForm v2', function (hooks) {
     const defaults: ArrayFormValues = {
       items: [{ label: 'first' }, { label: 'second' }],
     };
-    const form = createForm(owner, { defaultValues: defaults });
+    const form = createForm(owner, arrayOptions);
     arrayRenderCount = 0;
 
     await render(<template>
       <form.ArrayField @name="items" as |arrayField|>
         <ArrayRenderProbe @length={{arrayField.value.length}} />
         {{#each arrayField.value as |_item index|}}
-          <form.Field
-            @name={{concat "items[" index "].label"}}
-            as |itemField|
-          >
-            <output id={{concat "item-" index}}>
-              {{itemField.value}}|{{if itemField.meta.isTouched "touched" "untouched"}}
-            </output>
-            <button
-              id={{concat "blur-" index}}
-              type="button"
-              {{on "click" itemField.handleBlur}}
-            >
-              Blur
-            </button>
-          </form.Field>
+          <ArrayItemBinding @form={{form}} @index={{index}} />
         {{/each}}
       </form.ArrayField>
     </template>);
