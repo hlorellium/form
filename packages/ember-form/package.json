@@ -10,6 +10,10 @@
     "directory": "packages/ember-form"
   },
   "homepage": "https://tanstack.com/form",
+  "funding": {
+    "type": "github",
+    "url": "https://github.com/sponsors/tannerlinsley"
+  },
   "keywords": [
     "ember",
     "tanstack",
@@ -37,6 +41,7 @@
     "clean": "premove ./dist ./dist-tests ./declarations ./coverage",
     "build": "rollup --config",
     "test:eslint": "eslint ./src ./tests",
+    "test:lib": "pnpm run test:browser",
     "test:types": "ember-tsc --noEmit",
     "test:browser": "NODE_ENV=development vite build --mode=development --out-dir dist-tests && testem --file testem.cjs ci --port 0",
     "test:browser:dev": "vite dev",
@@ -51,6 +56,7 @@
   },
   "peerDependencies": {
     "@glimmer/component": "^2.0.0",
+    "@glint/template": ">=1.5.0",
     "ember-source": ">=7.1.0"
   },
   "devDependencies": {

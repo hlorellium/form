@@ -4,6 +4,7 @@
   "ignoreWorkspaces": [
     "examples/**",
     "packages/angular-form",
+    "packages/ember-form",
     "packages/lit-form",
     "packages/preact-form",
     "packages/solid-form-devtools",

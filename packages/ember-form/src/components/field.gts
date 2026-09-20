@@ -37,6 +37,11 @@ export default class Field extends Component<InternalFieldSignature> {
     throw new Error('Field must be bound to an Ember form instance');
   }
 
+  /**
+   * Reading the binding is the Ember observation point for tracked arguments.
+   * Core registration may synchronously update atoms here; AtomSelection keeps
+   * its value current but queues the Glimmer invalidation to avoid backtracking.
+   */
   get field(): AnyInternalFieldApi {
     const form = this.form;
 
@@ -75,10 +80,10 @@ export default class Field extends Component<InternalFieldSignature> {
         this.#fieldSelection = new AtomSelection(
           this,
           this.#field.atom,
-          selectFieldState,
+          selectFieldSnapshot,
         );
       } else {
-        this.#fieldSelection.update(this.#field.atom, selectFieldState);
+        this.#fieldSelection.update(this.#field.atom, selectFieldSnapshot);
       }
     } else {
       this.#field!._update(options, 'field');
@@ -95,10 +100,10 @@ export default class Field extends Component<InternalFieldSignature> {
   <template>{{yield this.field}}</template>
 }
 
-function selectFieldState(field: unknown): {
+function selectFieldSnapshot(snapshot: unknown): {
   value: unknown;
   meta: unknown;
 } {
-  const state = field as { value: unknown; meta: unknown };
+  const state = snapshot as { value: unknown; meta: unknown };
   return { value: state.value, meta: state.meta };
 }
