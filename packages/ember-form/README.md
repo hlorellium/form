@@ -8,71 +8,38 @@ form.
 
 ## Usage
 
-In this example, `savePassenger` represents your application's persistence
-function.
+Pass options directly to `createForm`. The shape of `defaultValues` determines
+field names and value types; no separate options object or type declaration is
+required.
 
 ```gts
 import Component from '@glimmer/component';
-import { fn, not } from '@ember/helper';
+import { array, fn, hash, not } from '@ember/helper';
 import { on } from '@ember/modifier';
-import {
-  createForm,
-  formOptions,
-  useSelector,
-  type EmberFormType,
-} from '@tanstack/ember-form';
+import { createForm } from '@tanstack/ember-form';
 
-const passengerOptions = formOptions({
-  defaultValues: {
-    passenger: { name: '' },
-  },
-});
-
-type PassengerForm = EmberFormType<typeof passengerOptions>;
-
-const updateText = (
-  field: { handleChange(value: string): void },
-  event: Event,
-) => field.handleChange((event.target as HTMLInputElement).value);
-
-interface PassengerFieldsSignature {
-  Args: { form: PassengerForm };
-}
-
-class PassengerFields extends Component<PassengerFieldsSignature> {
-  <template>
-    <this.args.form.Field @name="passenger.name" as |field|>
-      <label>
-        Name
-        <input
-          name="passenger.name"
-          value={{field.value}}
-          {{on "input" (fn updateText field)}}
-          {{on "blur" field.handleBlur}}
-        />
-      </label>
-
-      {{#each field.errors as |error|}}
-        <p>{{error.message}}</p>
-      {{/each}}
-    </this.args.form.Field>
-  </template>
-}
-
-export default class PassengerEditor extends Component {
+export default class ProfileForm extends Component {
   form = createForm(this, {
-    ...passengerOptions,
-    formId: 'passenger-editor',
+    defaultValues: {
+      fullName: '',
+    },
     onSubmit: async ({ value }) => {
-      await savePassenger(value);
+      console.log(value);
     },
   });
 
-  canSubmit = useSelector(
-    this,
-    this.form.atom,
-    (state) => state.canSubmit,
-  );
+  updateText = (
+    field: { handleChange(value: string): void },
+    event: Event,
+  ) => field.handleChange((event.target as HTMLInputElement).value);
+
+  validateName = ({ value }: { value: string }) =>
+    value.trim() ? undefined : 'Enter your full name';
+
+  selectSubmitState = (state: typeof this.form.state) => ({
+    canSubmit: state.canSubmit && !state.isSubmitting,
+    isSubmitting: state.isSubmitting,
+  });
 
   submit = (event: SubmitEvent) => {
     event.preventDefault();
@@ -81,21 +48,52 @@ export default class PassengerEditor extends Component {
 
   <template>
     <form {{on "submit" this.submit}}>
-      <PassengerFields @form={{this.form}} />
-      <button type="submit" disabled={{not this.canSubmit.current}}>
-        Save
-      </button>
+      <this.form.Field
+        @name="fullName"
+        @validators={{array
+          (hash triggers=(array "change" "blur") run=this.validateName)
+        }}
+        as |field|
+      >
+        <label>
+          Full name
+          <input
+            name={{field.name}}
+            value={{field.value}}
+            {{on "input" (fn this.updateText field)}}
+            {{on "blur" field.handleBlur}}
+            aria-invalid={{field.meta.isInvalid}}
+          />
+        </label>
+        {{#each field.errors as |error|}}
+          <span role="alert">{{error.message}}</span>
+        {{/each}}
+      </this.form.Field>
+
+      <this.form.Subscribe @selector={{this.selectSubmitState}} as |state|>
+        <button type="submit" disabled={{not state.canSubmit}}>
+          {{if state.isSubmitting "Saving…" "Save"}}
+        </button>
+      </this.form.Subscribe>
     </form>
   </template>
 }
 ```
 
+Ember templates reference named callbacks rather than inline arrow functions.
+`updateText` passes the input's value to the field, `validateName` validates it,
+and `submit` prevents native navigation before submitting the form.
+`selectSubmitState` selects the state observed by the submit button.
+
 ## Typing child components
 
-Declare reusable options with `formOptions`, then derive the exact form type
-for child component arguments:
+When you extract fields into a child component, `formOptions` lets you share
+the form definition and derive a type for the child's `@form` argument. This is
+optional; keep options inline for a form used in one component:
 
 ```ts
+import { formOptions, type EmberFormType } from '@tanstack/ember-form'
+
 const profileOptions = formOptions({
   defaultValues: { profile: { name: '' } },
 })
