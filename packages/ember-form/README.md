@@ -83,10 +83,31 @@ export default class PassengerEditor extends Component {
 }
 ```
 
+## Typing child components
+
+Declare reusable options with `formOptions`, then derive the exact form type
+for child component arguments:
+
+```ts
+const profileOptions = formOptions({
+  defaultValues: { profile: { name: '' } },
+})
+
+type ProfileForm = EmberFormType<typeof profileOptions>
+```
+
+Prefer this over `EmberFormApi<T, any>`: `EmberFormType` retains the options'
+inferred field paths, values, validator errors, and component metadata. Use
+`AnyEmberFormApi` only when a child intentionally works with every form shape.
+
+Use `<form.Subscribe>` (or standalone `<Subscribe @source={{form.atom}}>`) when
+template output must react to selected state. `form.state` is a current
+imperative read; reading it alone does not establish an Ember autotracking
+dependency.
+
 The field block observes v2 `field.value`, `field.meta`, and `field.errors`.
 For other reactive UI, use `useSelector` or the form-bound
-`<this.form.Subscribe>` component. `form.state` is a current imperative read;
-reading it alone does not establish an Ember autotracking dependency.
+`<this.form.Subscribe>` component.
 
 The creation options are initial configuration. They are not automatically
 observed or reconciled. Stable callbacks can read current application state

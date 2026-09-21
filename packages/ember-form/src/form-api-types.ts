@@ -547,5 +547,26 @@ export type EmberFormApi<
 > = FormApi<TFormData, TFormErrorTypes> &
   EmberTanStackFormComponents<TFormData, TFormErrorTypes, TComponents>
 
+/**
+ * An Ember form API whose form data, error, and field-component types are
+ * erased.
+ *
+ * Use it for reusable components that only need operations common to every
+ * form. Field paths and values are not checked against a particular form
+ * shape; use `EmberFormType` when a component belongs to one known form.
+ *
+ * @example
+ * ```gts
+ * interface ResetButtonSignature {
+ *   Args: { form: AnyEmberFormApi };
+ * }
+ *
+ * class ResetButton extends Component<ResetButtonSignature> {
+ *   <template>
+ *     <button type="button" {{on "click" this.args.form.reset}}>Reset</button>
+ *   </template>
+ * }
+ * ```
+ */
 export type AnyEmberFormApi = AnyFormApi &
   EmberTanStackFormComponents<any, any, any>
