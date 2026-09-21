@@ -514,4 +514,45 @@ module('Integration | createForm v2', function (hooks) {
 
     destroy(owner);
   });
+
+  test('surfaces onSubmit createValidationError on bound field and form errors', async function (assert) {
+    const owner = {};
+    const form = createForm(owner, {
+      defaultValues: { name: '', email: '' } as Profile,
+      onSubmit: ({ createValidationError }) =>
+        createValidationError({
+          fields: {
+            email: { message: 'Email is already registered' },
+          },
+          form: 'Could not save passenger',
+        }),
+    });
+    const selectFormErrors = (state: {
+      errors: Array<{ message: string }>;
+    }) => state.errors;
+
+    await render(<template>
+      <form.Field @name="email" as |field|>
+        {{#each field.errors as |error|}}
+          <em class="field-error">{{error.message}}</em>
+        {{/each}}
+      </form.Field>
+      <form.Subscribe @selector={{selectFormErrors}} as |errors|>
+        {{#each errors as |error|}}
+          <em class="form-error">{{error.message}}</em>
+        {{/each}}
+      </form.Subscribe>
+    </template>);
+
+    assert.dom('.field-error').doesNotExist();
+    assert.dom('.form-error').doesNotExist();
+
+    await form.handleSubmit();
+    await settled();
+
+    assert.dom('.field-error').hasText('Email is already registered');
+    assert.dom('.form-error').hasText('Could not save passenger');
+
+    destroy(owner);
+  });
 });
