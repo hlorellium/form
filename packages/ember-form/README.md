@@ -8,6 +8,7 @@ form.
 
 ```gts
 import Component from '@glimmer/component';
+import { not } from '@ember/helper';
 import {
   createForm,
   formOptions,
@@ -105,7 +106,32 @@ template output must react to selected state. `form.state` is a current
 imperative read; reading it alone does not establish an Ember autotracking
 dependency.
 
-The field block observes v2 `field.value`, `field.meta`, and `field.errors`.
+Regular field blocks observe v2 `field.value`, `field.meta`, and `field.errors`.
+`ArrayField` intentionally observes array structure (`length` and its structural
+version), so edits to an item do not rerender the array container. Subscribe to
+array-level errors or metadata through the field atom when that state belongs in
+the surrounding UI:
+
+```gts
+import { Subscribe } from '@tanstack/ember-form';
+
+const selectArrayErrors = (state: { meta: { errors: readonly unknown[] } }) =>
+  state.meta.errors;
+
+<form.ArrayField @name="items" as |field|>
+  {{! render the array structure here }}
+  <Subscribe
+    @source={{field.atom}}
+    @selector={{selectArrayErrors}}
+    as |errors|
+  >
+    {{#each errors as |error|}}
+      <p>{{error}}</p>
+    {{/each}}
+  </Subscribe>
+</form.ArrayField>
+```
+
 For other reactive UI, use `useSelector` or the form-bound
 `<this.form.Subscribe>` component.
 

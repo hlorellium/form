@@ -27,19 +27,15 @@ interface InternalFormGroupSignature {
 }
 
 export default class FormGroup extends Component<InternalFormGroupSignature> {
-  readonly #group: FormGroupWithComponents;
-  readonly #selection: AtomSelection<any, unknown>;
+  #group!: FormGroupWithComponents;
+  #selection!: AtomSelection<any, unknown>;
+  #form!: AnyInternalFormApi;
+  #name: unknown = undefined;
 
   constructor(owner: Owner, args: InternalFormGroupSignature['Args']) {
     super(owner, args);
 
-    const group = new InternalFormGroupApi({
-      ...args,
-      form: this.form,
-    } as never);
-
-    this.#group = attachEmberFormGroupComponents(group, this.form);
-    this.#group.mount();
+    this.#replaceGroup(this.form, args);
     this.#selection = new AtomSelection(
       this,
       this.#group.atom,
@@ -54,9 +50,30 @@ export default class FormGroup extends Component<InternalFormGroupSignature> {
   }
 
   get group(): FormGroupWithComponents {
-    this.#group.update({ ...this.args, form: this.form } as never);
+    const form = this.form;
+
+    if (form !== this.#form || this.args.name !== this.#name) {
+      this.#replaceGroup(form, this.args);
+      this.#selection.update(this.#group.atom, selectGroupState);
+    } else {
+      this.#group.update({ ...this.args, form } as never);
+    }
+
     void this.#selection.current;
     return this.#group;
+  }
+
+  #replaceGroup(
+    form: AnyInternalFormApi,
+    args: InternalFormGroupSignature['Args'],
+  ): void {
+    this.#group?._cleanup();
+
+    const group = new InternalFormGroupApi({ ...args, form } as never);
+    this.#group = attachEmberFormGroupComponents(group, form);
+    this.#group.mount();
+    this.#form = form;
+    this.#name = args.name;
   }
 
   <template>{{yield this.group}}</template>
