@@ -131,6 +131,149 @@ export interface EmberFormArrayFieldComponent<
   }>
 }
 
+type EmberFieldComponentArgs<
+  TFormData,
+  TFormErrorTypes extends FormErrorTypes,
+  TFieldComponents extends EmberFieldComponents,
+  TFieldName extends DeepKeys<TFormData>,
+  TFieldValidators extends FieldValidators<
+    TFormData,
+    TFieldName,
+    DeepValue<TFormData, TFieldName>
+  >,
+> = FieldApiOptions<
+  TFormData,
+  TFieldName,
+  DeepValue<TFormData, TFieldName>,
+  TFieldValidators,
+  never,
+  TFormData,
+  TFormErrorTypes
+> & {
+  form: EmberFormApi<TFormData, TFormErrorTypes, TFieldComponents>
+}
+
+/**
+ * A standalone Ember field component that infers its field types from `@form`.
+ */
+export interface EmberFieldComponent {
+  new <
+    TFormData,
+    TFormErrorTypes extends FormErrorTypes,
+    TFieldComponents extends EmberFieldComponents,
+    TFieldName extends DeepKeys<TFormData>,
+    const TFieldValidators extends FieldValidators<
+      TFormData,
+      TFieldName,
+      DeepValue<TFormData, TFieldName>
+    >,
+  >(
+    owner: unknown,
+    args: EmberFieldComponentArgs<
+      TFormData,
+      TFormErrorTypes,
+      TFieldComponents,
+      TFieldName,
+      TFieldValidators
+    >,
+  ): Component<{
+    Args: EmberFieldComponentArgs<
+      TFormData,
+      TFormErrorTypes,
+      TFieldComponents,
+      TFieldName,
+      TFieldValidators
+    >
+    Blocks: {
+      default: [
+        field: EmberFieldApi<
+          TFieldName,
+          DeepValue<TFormData, TFieldName>,
+          ToFieldError<NoInfer<TFieldValidators>, never, TFormErrorTypes>,
+          TFormData,
+          TFormErrorTypes,
+          TFieldComponents
+        >,
+      ]
+    }
+  }>
+}
+
+type EmberArrayFieldComponentArgs<
+  TFormData,
+  TFormErrorTypes extends FormErrorTypes,
+  TFieldComponents extends EmberFieldComponents,
+  TFieldName extends DeepKeysWhereValueIncludes<
+    TFormData,
+    ReadonlyArray<any>
+  >,
+  TFieldValidators extends FieldValidators<
+    TFormData,
+    TFieldName,
+    DeepValue<TFormData, TFieldName>
+  >,
+> = FieldApiOptions<
+  TFormData,
+  TFieldName,
+  DeepValue<TFormData, TFieldName>,
+  TFieldValidators,
+  never,
+  TFormData,
+  TFormErrorTypes
+> & {
+  form: EmberFormApi<TFormData, TFormErrorTypes, TFieldComponents>
+}
+
+/**
+ * A standalone Ember array field component that infers its field types from
+ * `@form`.
+ */
+export interface EmberArrayFieldComponent {
+  new <
+    TFormData,
+    TFormErrorTypes extends FormErrorTypes,
+    TFieldComponents extends EmberFieldComponents,
+    TFieldName extends DeepKeysWhereValueIncludes<
+      TFormData,
+      ReadonlyArray<any>
+    >,
+    const TFieldValidators extends FieldValidators<
+      TFormData,
+      TFieldName,
+      DeepValue<TFormData, TFieldName>
+    >,
+  >(
+    owner: unknown,
+    args: EmberArrayFieldComponentArgs<
+      TFormData,
+      TFormErrorTypes,
+      TFieldComponents,
+      TFieldName,
+      TFieldValidators
+    >,
+  ): Component<{
+    Args: EmberArrayFieldComponentArgs<
+      TFormData,
+      TFormErrorTypes,
+      TFieldComponents,
+      TFieldName,
+      TFieldValidators
+    >
+    Blocks: {
+      default: [
+        field: EmberFieldApi<
+          TFieldName,
+          DeepValue<TFormData, TFieldName>,
+          ToFieldError<NoInfer<TFieldValidators>, never, TFormErrorTypes>,
+          TFormData,
+          TFormErrorTypes,
+          TFieldComponents
+        >,
+      ]
+    }
+  }>
+}
+
 export interface EmberFormSubscribeComponent<
   TFormData,
   TFormErrorTypes extends FormErrorTypes,

@@ -10,7 +10,9 @@ import type {
 } from '@tanstack/form-core/internals';
 
 interface InternalFieldSignature {
-  Args: FieldApiOptions<any, any, any, any, any, any, any>;
+  Args: FieldApiOptions<any, any, any, any, any, any, any> & {
+    form?: AnyInternalFormApi;
+  };
   Blocks: { default: [field: AnyInternalFieldApi] };
 }
 
@@ -29,6 +31,10 @@ export default class Field extends Component<InternalFieldSignature> {
   }
 
   get form(): AnyInternalFormApi {
+    if (this.args.form !== undefined) {
+      return this.args.form;
+    }
+
     throw new Error('Field must be bound to an Ember form instance');
   }
 

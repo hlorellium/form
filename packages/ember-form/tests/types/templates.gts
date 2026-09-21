@@ -140,6 +140,20 @@ class ProfileFields extends Component<ProfileFieldsSignature> {
 class Example extends Component {
   form = createForm(this, profileOptions);
 
+  ageValidators: FieldValidators<ProfileData, 'profile.age', number> = [
+    {
+      triggers: [],
+      run: ({ value }) => (value < 0 ? 'Age must be positive' : undefined),
+    },
+  ];
+
+  nameValidators: FieldValidators<ProfileData, 'profile.name', string> = [
+    {
+      triggers: [],
+      run: ({ value }) => (value === '' ? 'Name is required' : undefined),
+    },
+  ];
+
   selectCanSubmit = (state: this['form']['state']): boolean => state.canSubmit;
   selectAge = (state: this['form']['state']): number =>
     state.values.profile.age;
@@ -178,6 +192,15 @@ class Example extends Component {
         {{! @glint-expect-error standalone string field rejects numbers }}
         {{field.handleChange 1}}
       </Field>
+
+      <Field
+        @form={{this.form}}
+        @name="profile.age"
+        @validators={{this.ageValidators}}
+      />
+
+      {{! @glint-expect-error standalone validator must match field value }}
+      <Field @form={{this.form}} @name="profile.age" @validators={{this.nameValidators}} />
 
       {{! @glint-expect-error standalone Field checks form paths }}
       <Field @form={{this.form}} @name="profile.missing" />
