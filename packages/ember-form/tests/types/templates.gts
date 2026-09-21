@@ -216,3 +216,30 @@ class Example extends Component {
 }
 
 void Example;
+
+class ReactiveExample extends Component<{ Args: { profile: ProfileData['profile'] } }> {
+  form = createForm(this, () => ({
+    defaultValues: { profile: this.args.profile },
+    onSubmit: ({ value }) => {
+      const name: string = value.profile.name;
+      // @ts-expect-error options functions preserve the inferred value type
+      const age: string = value.profile.age;
+      void name;
+      void age;
+    },
+  }));
+
+  expectString = (_value: string): void => {};
+
+  <template>
+    <this.form.Field @name="profile.name" as |field|>
+      {{this.expectString field.value}}
+      {{! @glint-expect-error options functions preserve field value types }}
+      {{field.handleChange 1}}
+    </this.form.Field>
+    {{! @glint-expect-error options functions preserve field paths }}
+    <this.form.Field @name="profile.missing" />
+  </template>
+}
+
+void ReactiveExample;

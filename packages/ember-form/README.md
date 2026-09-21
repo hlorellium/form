@@ -142,10 +142,25 @@ const selectArrayErrors = (state: { meta: { errors: readonly unknown[] } }) =>
 
 ## Configuration and defaults
 
-The creation options are initial configuration. They are not automatically
-observed or reconciled. Stable callbacks can read current application state
-when called. Use core field/form operations for editable values and `reset`
-only when its value, metadata, and baseline reset semantics are intended.
+Pass an object for fixed configuration, or an options function when configuration
+depends on tracked properties or component arguments:
+
+```ts
+form = createForm(this, () => ({
+  defaultValues: this.args.profile,
+  validators: this.args.validators,
+  onSubmit: this.args.onSave,
+}))
+```
+
+The function runs again when its tracked dependencies change. Updates are
+applied asynchronously through Ember's run loop to the same form instance,
+without remounting its fields. Observation stops when the supplied parent is
+destroyed. Plain, untracked property mutations do not trigger updates.
+
+Changed `defaultValues` update untouched fields while preserving touched field
+values, following form-core's update semantics. Use `reset` when you intend to
+discard edits and reset metadata, such as when switching to a different record.
 
 Supply an explicit `formId` when server and browser output must share an
 identifier. Otherwise form-core generates the identifier.

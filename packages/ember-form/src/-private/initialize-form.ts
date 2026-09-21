@@ -4,6 +4,7 @@ import ArrayField from '../components/array-field.gts'
 import Field from '../components/field.gts'
 import FormGroup from '../components/form-group.gts'
 import Subscribe from '../components/subscribe.gts'
+import { ReactiveOptions } from './reactive-options.ts'
 
 import type { FormOptions } from '@tanstack/form-core'
 import type { AnyInternalFormApi } from '@tanstack/form-core/internals'
@@ -52,13 +53,28 @@ export function initializeForm(
 
 export function createInternalForm(
   parent: object,
-  options: FormOptions<any, any, any, unknown>,
+  options:
+    | FormOptions<any, any, any, unknown>
+    | (() => FormOptions<any, any, any, unknown>),
   initialize: (
     options: FormOptions<any, any, any, unknown>,
   ) => InternalEmberFormApi,
 ): InternalEmberFormApi {
-  const form = initialize(options)
-  const unmount = form.mount()
-  registerDestructor(parent, unmount)
+  const reactive =
+    typeof options === 'function' ? new ReactiveOptions(options) : undefined
+  const initialOptions = typeof options === 'function' ? reactive!.value : options
+  const form = initialize(initialOptions)
+  const stop = reactive?.subscribe(parent, (next) => form._update(next))
+  let unmount: () => void
+  try {
+    unmount = form.mount()
+  } catch (error) {
+    stop?.()
+    throw error
+  }
+  registerDestructor(parent, () => {
+    stop?.()
+    unmount()
+  })
   return form
 }
