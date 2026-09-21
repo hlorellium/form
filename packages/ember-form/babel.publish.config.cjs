@@ -1,3 +1,6 @@
+/**
+ * Publishing configuration. See babel.config.cjs for local development.
+ */
 module.exports = {
   plugins: [
     [

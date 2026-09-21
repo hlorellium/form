@@ -41,7 +41,6 @@
     "clean": "premove ./dist ./dist-tests ./declarations ./coverage",
     "build": "rollup --config",
     "test:eslint": "eslint ./src ./tests",
-    "test:lib": "pnpm run test:browser",
     "test:types": "ember-tsc --noEmit",
     "test:browser": "NODE_ENV=development vite build --mode=development --out-dir dist-tests && testem --file testem.cjs ci --port 0",
     "test:browser:dev": "vite dev",
@@ -94,6 +93,13 @@
     "rollup": "^4.22.5",
     "testem": "^3.15.1",
     "vite": "^7.2.2"
+  },
+  "nx": {
+    "targets": {
+      "build": {
+        "outputs": ["{projectRoot}/dist", "{projectRoot}/declarations"]
+      }
+    }
   },
   "ember-addon": {
     "version": 2,

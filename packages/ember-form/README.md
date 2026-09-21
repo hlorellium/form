@@ -6,9 +6,15 @@ Ember bindings for TanStack Form v2 alpha.
 owns its mount and cleanup; rendering a component is not required to create the
 form.
 
+## Usage
+
+In this example, `savePassenger` represents your application's persistence
+function.
+
 ```gts
 import Component from '@glimmer/component';
-import { not } from '@ember/helper';
+import { fn, not } from '@ember/helper';
+import { on } from '@ember/modifier';
 import {
   createForm,
   formOptions,
@@ -97,9 +103,13 @@ const profileOptions = formOptions({
 type ProfileForm = EmberFormType<typeof profileOptions>
 ```
 
-Prefer this over `EmberFormApi<T, any>`: `EmberFormType` retains the options'
-inferred field paths, values, validator errors, and component metadata. Use
-`AnyEmberFormApi` only when a child intentionally works with every form shape.
+`EmberFormType` preserves the options' inferred field paths and values. It also
+derives error types when the options supply a known submit return type; otherwise
+its error type falls back to `any`, allowing `onSubmit` to be supplied when the
+form is created. Use `AnyEmberFormApi` only when a child intentionally works with
+every form shape.
+
+## Reactive state
 
 Use `<form.Subscribe>` (or standalone `<Subscribe @source={{form.atom}}>`) when
 template output must react to selected state. `form.state` is a current
@@ -132,8 +142,7 @@ const selectArrayErrors = (state: { meta: { errors: readonly unknown[] } }) =>
 </form.ArrayField>
 ```
 
-For other reactive UI, use `useSelector` or the form-bound
-`<this.form.Subscribe>` component.
+## Configuration and defaults
 
 The creation options are initial configuration. They are not automatically
 observed or reconciled. Stable callbacks can read current application state
@@ -143,21 +152,27 @@ only when its value, metadata, and baseline reset semantics are intended.
 Supply an explicit `formId` when server and browser output must share an
 identifier. Otherwise form-core generates the identifier.
 
-## Non-goals
+Set field defaults through the form's `defaultValues`. `Field` does not accept
+an `@defaultValue` argument.
 
-Out of scope for this alpha adapter:
+## Development
 
-- FieldGroup / `withFields`
-- `createFormHook` / AppForm / `componentMap`
-- a standalone FormGroup export
-- an Ember DevTools adapter
+Run these commands from the repository root after installing dependencies:
 
-## Type seams
+```sh
+pnpm --filter @tanstack/form-core build
+pnpm --filter @tanstack/ember-form test:types
+pnpm --filter @tanstack/ember-form test:eslint
+pnpm --filter @tanstack/ember-form test:browser
+pnpm --filter @tanstack/ember-form build
+pnpm --filter @tanstack/ember-form test:build
+```
 
-`createForm` types `FormOptions` component and widget metadata as `unknown`
-because Ember does not register AppField widgets yet.
+`test:types` uses `ember-tsc` to check both TypeScript and Glint templates,
+including the contracts in `tests/types/templates.gts`. The package-local ESLint
+configuration handles `.gts` and `.gjs` as well as ordinary TypeScript and
+JavaScript. Browser tests use QUnit, Vite, and Testem and require Chrome locally;
+`test:browser:dev` starts the interactive Vite runner.
 
-Per-field `@defaultValue` on `Field` is not part of form-core v2
-`FieldApiOptions`. Defaults belong on form-level `defaultValues` only. See
-the existing `@glint-expect-error` for `@defaultValue` in
-`tests/types/templates.gts`.
+CI checks browser behavior and template types against both the locked Ember
+version and Ember 7.1, the oldest supported minor.

@@ -1,3 +1,7 @@
+/**
+ * Development and linting configuration. Publishing uses
+ * babel.publish.config.cjs so consumers receive unconfigured Ember macros.
+ */
 const { buildMacros } = require('@embroider/macros/babel')
 
 const macros = buildMacros()
