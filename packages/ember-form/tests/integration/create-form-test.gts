@@ -5,7 +5,9 @@ import { click, fillIn, render, settled } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import {
+  ArrayField,
   createForm,
+  Field,
   useSelector,
   type EmberFormType,
   type FormGroupValidators,
@@ -331,6 +333,37 @@ module('Integration | createForm v2', function (hooks) {
     await settled();
     assert.dom('#field-value').hasText('Reset', 'field rebinds after reset');
     assert.dom('#selected').hasText('Reset');
+
+    destroy(owner);
+  });
+
+  test('binds standalone fields through their form argument', async function (assert) {
+    const owner = {};
+    const form = createForm(owner, {
+      defaultValues: {
+        name: 'Grace',
+        items: [{ label: 'first' }],
+      },
+    });
+
+    await render(<template>
+      <Field @form={{form}} @name="name" as |field|>
+        <output id="standalone-field">{{field.value}}</output>
+      </Field>
+      <ArrayField @form={{form}} @name="items" as |field|>
+        <output id="standalone-array">{{field.value.length}}</output>
+      </ArrayField>
+    </template>);
+
+    assert.dom('#standalone-field').hasText('Grace');
+    assert.dom('#standalone-array').hasText('1');
+
+    form.setFieldValue('name', 'Ada');
+    form.pushFieldValue('items', { label: 'second' });
+    await settled();
+
+    assert.dom('#standalone-field').hasText('Ada');
+    assert.dom('#standalone-array').hasText('2');
 
     destroy(owner);
   });
