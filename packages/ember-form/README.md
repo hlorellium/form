@@ -116,3 +116,22 @@ only when its value, metadata, and baseline reset semantics are intended.
 
 Supply an explicit `formId` when server and browser output must share an
 identifier. Otherwise form-core generates the identifier.
+
+## Non-goals
+
+Out of scope for this alpha adapter:
+
+- FieldGroup / `withFields`
+- `createFormHook` / AppForm / `componentMap`
+- a standalone FormGroup export
+- an Ember DevTools adapter
+
+## Type seams
+
+`createForm` types `FormOptions` component and widget metadata as `unknown`
+because Ember does not register AppField widgets yet.
+
+Per-field `@defaultValue` on `Field` is not part of form-core v2
+`FieldApiOptions`. Defaults belong on form-level `defaultValues` only. See
+the existing `@glint-expect-error` for `@defaultValue` in
+`tests/types/templates.gts`.
