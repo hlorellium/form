@@ -97,6 +97,15 @@
               "to": "framework/svelte/quick-start"
             }
           ]
+        },
+        {
+          "label": "ember",
+          "children": [
+            {
+              "label": "Quick Start",
+              "to": "framework/ember/quick-start"
+            }
+          ]
         }
       ]
     },
@@ -248,6 +257,39 @@
             {
               "label": "Debugging",
               "to": "framework/svelte/guides/debugging"
+            }
+          ]
+        },
+        {
+          "label": "ember",
+          "children": [
+            {
+              "label": "Arrays",
+              "to": "framework/ember/guides/arrays"
+            },
+            {
+              "label": "Async Initial Values",
+              "to": "framework/ember/guides/async-initial-values"
+            },
+            {
+              "label": "Basic Concepts",
+              "to": "framework/ember/guides/basic-concepts"
+            },
+            {
+              "label": "Dynamic Validation",
+              "to": "framework/ember/guides/dynamic-validation"
+            },
+            {
+              "label": "Form Composition",
+              "to": "framework/ember/guides/form-composition"
+            },
+            {
+              "label": "Linked Fields",
+              "to": "framework/ember/guides/linked-fields"
+            },
+            {
+              "label": "Form Validation",
+              "to": "framework/ember/guides/validation"
             }
           ]
         }
