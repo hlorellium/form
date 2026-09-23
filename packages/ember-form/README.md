@@ -8,7 +8,7 @@ form.
 
 ## Usage
 
-Pass options directly to `createForm`. The shape of `defaultValues` determines
+Pass an options factory to `createForm`. The shape of `defaultValues` determines
 field names and value types; no separate options object or type declaration is
 required.
 
@@ -19,14 +19,14 @@ import { on } from '@ember/modifier';
 import { createForm } from '@tanstack/ember-form';
 
 export default class ProfileForm extends Component {
-  form = createForm(this, {
+  form = createForm(this, () => ({
     defaultValues: {
       fullName: '',
     },
     onSubmit: async ({ value }) => {
       console.log(value);
     },
-  });
+  }));
 
   updateText = (
     field: { handleChange(value: string): void },
@@ -109,16 +109,61 @@ every form shape.
 
 ## Reactive state
 
-Use `<form.Subscribe>` (or standalone `<Subscribe @source={{form.atom}}>`) when
-template output must react to selected state. `form.state` is a current
-imperative read; reading it alone does not establish an Ember autotracking
-dependency.
+Core reads remain synchronous snapshots, and their existing object identity is
+preserved. Form-owned Ember handles observe direct reads from a form's `state`,
+a field's `value`, `meta`, or `errors`, and a group's `state`:
 
-Regular field blocks observe v2 `field.value`, `field.meta`, and `field.errors`.
-`ArrayField` intentionally observes array structure (`length` and its structural
-version), so edits to an item do not rerender the array container. Subscribe to
-array-level errors or metadata through the field atom when that state belongs in
-the surrounding UI:
+```gts
+get submitDisabled(): boolean {
+  return this.form.state.isSubmitting;
+}
+```
+
+Each property read establishes a dependency on its own core projection. Notification
+is scheduled safely after the current render; the getter still reads the latest
+core snapshot synchronously. Application values remain ordinary data, not deep
+reactive proxies. An array binding observes structure, so item edits do not
+rerender its container; a separate ordinary field binding cannot broaden that
+observation.
+
+For fine-grained projections in a class getter, use `useSelector`; it accepts a
+raw atom or a form, field, or group directly:
+
+```gts
+import { createForm, useSelector } from '@tanstack/ember-form';
+
+export default class ProfileForm extends Component {
+  form = createForm(this, () => ({ defaultValues: { name: '' } }));
+  submitState = useSelector(this, () => this.form, (state) => ({
+    canSubmit: state.canSubmit,
+    isSubmitting: state.isSubmitting,
+  }));
+
+  get canSubmit(): boolean {
+    return this.submitState.current.canSubmit;
+  }
+}
+```
+
+The getter form source follows a tracked `this.form` replacement without
+rebuilding the selection. A raw atom remains supported, for example
+`useSelector(this, this.form.atom, (state) => state.values.name)`. The selected
+`current` value is reactive wherever Ember consumes it, while imperative atom
+and snapshot reads remain synchronous.
+
+Use `<form.Subscribe>` (or standalone `<Subscribe @source={{form.atom}}>`)
+when template output needs an explicit selector or projection. Subscribe also
+accepts a form, field, or group source directly when that is more convenient.
+Field and group configuration belongs to the form rather than the rendering
+component. Selectors remain optional for projections; direct reads do not require
+`.current` or `<Subscribe>`.
+
+Regular field bindings observe their value and the metadata/error properties
+consumed by the UI. `ArrayField.value` observes array structure (`length` and its
+structural version), so item-value edits alone do not invalidate that read.
+An ordinary `Field` over the same array does not broaden the array binding's
+observation. Read array-level errors and metadata directly, or use an optional
+selector when an explicit projection is useful:
 
 ```gts
 import { Subscribe } from '@tanstack/ember-form';
@@ -142,8 +187,8 @@ const selectArrayErrors = (state: { meta: { errors: readonly unknown[] } }) =>
 
 ## Configuration and defaults
 
-Pass an object for fixed configuration, or an options function when configuration
-depends on tracked properties or component arguments:
+Pass an options factory when configuration depends on tracked properties or
+component arguments. JavaScript field and group factories use the same shape:
 
 ```ts
 form = createForm(this, () => ({
@@ -151,6 +196,14 @@ form = createForm(this, () => ({
   validators: this.args.validators,
   onSubmit: this.args.onSave,
 }))
+
+email = this.form.field(() => ({
+  name: 'email',
+  validators: this.args.emailValidators,
+}))
+
+people = this.form.arrayField(() => ({ name: 'people' }))
+profile = this.form.formGroup(() => ({ name: 'profile' }))
 ```
 
 The function runs again when its tracked dependencies change. Updates are

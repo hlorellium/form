@@ -1,7 +1,7 @@
 import Component from '@glimmer/component';
 import { AtomSelection } from '../-private/select-atom.ts';
 
-import type { SelectorSource } from '../-private/select-atom.ts';
+import type { SelectorSourceInput } from '../-private/select-atom.ts';
 import type { EmberSubscribeSignature } from '../form-api-types.ts';
 
 export default class Subscribe extends Component<
@@ -9,7 +9,7 @@ export default class Subscribe extends Component<
 > {
   #selection: AtomSelection<any, any> | undefined;
 
-  get source(): SelectorSource<any> {
+  get source(): SelectorSourceInput<any> {
     return this.args.source;
   }
 

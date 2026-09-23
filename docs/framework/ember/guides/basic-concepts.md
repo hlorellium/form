@@ -53,7 +53,7 @@ const options = formOptions({
 });
 
 export default class PersonForm extends Component {
-  form = createForm(this, options);
+  form = createForm(this, () => options);
 
   submit = (event: SubmitEvent): void => {
     event.preventDefault();
@@ -233,9 +233,14 @@ const selectSubmit = (state: {
 </Subscribe>
 ```
 
-Read `form.state` for an imperative current snapshot; that read alone does not
-create an Ember autotracking dependency. A selector should be a stable named
-function or class field rather than an inline template closure.
+Core snapshots remain synchronous and preserve their object identity. Direct
+reads from `form.state`, yielded `field.value`/`field.meta`/`field.errors`, and a
+group's `state` establish property-scoped Ember dependencies; notification is
+deferred safely until after the current render. `ArrayField` remains
+structure-only, so nested item edits do not rerender its container. Independent
+ordinary and array bindings do not alter one another's observation. For
+fine-grained projections, keep selectors stable and use `Subscribe` or
+`useSelector` rather than relying on arbitrary deep tracking.
 
 ## Array fields
 

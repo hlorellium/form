@@ -1,7 +1,4 @@
 import Component from '@glimmer/component';
-import { registerDestructor } from '@ember/destroyable';
-import { InternalFormGroupApi } from '@tanstack/form-core/internals';
-import { AtomSelection } from '../-private/select-atom.ts';
 import ArrayField from './array-field.gts';
 import Field from './field.gts';
 import Subscribe from './subscribe.gts';
@@ -28,21 +25,14 @@ interface InternalFormGroupSignature {
 
 export default class FormGroup extends Component<InternalFormGroupSignature> {
   #group!: FormGroupWithComponents;
-  #selection!: AtomSelection<any, unknown>;
+  #binding: any;
   #form!: AnyInternalFormApi;
-  #name: unknown = undefined;
 
   constructor(owner: Owner, args: InternalFormGroupSignature['Args']) {
     super(owner, args);
-
-    this.#replaceGroup(this.form, args);
-    this.#selection = new AtomSelection(
-      this,
-      this.#group.atom,
-      selectGroupState,
-    );
-
-    registerDestructor(this, () => this.#group._cleanup());
+    this.#form = this.form;
+    this.#binding = (this.form as any).formGroup(() => this.args);
+    this.#group = this.#bindComponents(this.#binding, this.#form);
   }
 
   get form(): AnyInternalFormApi {
@@ -50,30 +40,22 @@ export default class FormGroup extends Component<InternalFormGroupSignature> {
   }
 
   get group(): FormGroupWithComponents {
-    const form = this.form;
-
-    if (form !== this.#form || this.args.name !== this.#name) {
-      this.#replaceGroup(form, this.args);
-      this.#selection.update(this.#group.atom, selectGroupState);
-    } else {
-      this.#group.update({ ...this.args, form } as never);
-    }
-
-    void this.#selection.current;
+    this.#group = this.#bindComponents(this.#binding, this.#form);
     return this.#group;
   }
 
-  #replaceGroup(
-    form: AnyInternalFormApi,
-    args: InternalFormGroupSignature['Args'],
-  ): void {
-    this.#group?._cleanup();
+  get formGroup(): AnyFormGroup {
+    return this.#binding.core;
+  }
 
-    const group = new InternalFormGroupApi({ ...args, form } as never);
-    this.#group = attachEmberFormGroupComponents(group, form);
-    this.#group.mount();
-    this.#form = form;
-    this.#name = args.name;
+  #bindComponents(
+    binding: any,
+    form: AnyInternalFormApi,
+  ): FormGroupWithComponents {
+    if (binding.core.Field === undefined) {
+      attachEmberFormGroupComponents(binding.core, form);
+    }
+    return binding as FormGroupWithComponents;
   }
 
   <template>{{yield this.group}}</template>
@@ -141,8 +123,4 @@ function mergeFieldOptions<TOptions>(
   overrides: Partial<TOptions>,
 ): TOptions {
   return { ...base, ...overrides };
-}
-
-function selectGroupState(state: unknown): unknown {
-  return state;
 }

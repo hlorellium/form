@@ -35,9 +35,9 @@ const ageValidators: FieldValidators<AgeValues, 'age', number> = [
 ];
 
 export default class AgeForm extends Component {
-  form = createForm(this, {
+  form = createForm(this, () => ({
     defaultValues: { age: 0 } satisfies AgeValues,
-  });
+  }));
 
   updateNumber = (
     field: { handleChange(value: number): void },
@@ -160,7 +160,8 @@ const contactValidators: FormValidators<Contact> = [
 ];
 ```
 
-Put `contactValidators` in `createForm(this, { validators: ... })`. Form-level
+Put `contactValidators` in the `createForm(this, () => ({ validators: ... }))`
+factory. Form-level
 errors are available in `form.state.errors`; issues routed to fields appear in
 those field APIs. Subscribe to a selected slice in a template:
 
@@ -264,7 +265,7 @@ interface ProfileSignature {
 }
 
 export default class ProfileForm extends Component<ProfileSignature> {
-  form = createForm(this, {
+  form = createForm(this, () => ({
     defaultValues: { email: '' },
     onSubmit: async ({ value, createValidationError }) => {
       const result = await this.args.saveProfile(value);
@@ -276,7 +277,7 @@ export default class ProfileForm extends Component<ProfileSignature> {
       }
       return null;
     },
-  });
+  }));
 
   submit = (event: SubmitEvent): void => {
     event.preventDefault();

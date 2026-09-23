@@ -25,7 +25,7 @@ import { fn } from '@ember/helper';
 import { createForm } from '@tanstack/ember-form';
 
 export default class ProfileForm extends Component {
-  form = createForm(this, {
+  form = createForm(this, () => ({
     defaultValues: {
       fullName: '',
     },
@@ -33,7 +33,7 @@ export default class ProfileForm extends Component {
       // Save value with your application or data-loading layer.
       console.log(value);
     },
-  });
+  }));
 
   updateText = (
     field: { handleChange(value: string): void },
@@ -154,8 +154,10 @@ creating another form. A template-only child can use `<@form.Field>`.
 - Put complete `defaultValues` on the form; `Field` has no per-field
   `@defaultValue` argument.
 - Read field values, metadata, and errors through `field.value`, `field.meta`,
-  and `field.errors`. Errors are objects with a `message` property.
-- Reading `this.form.state` is an imperative snapshot and does not itself create
-  an Ember autotracking dependency.
+  and `field.errors`. These direct reads establish property-scoped dependencies
+  for ordinary fields; errors are objects with a `message` property.
+- Reading `this.form.state` remains synchronous and observes the requested state
+  property. `ArrayField` intentionally observes structure only, so nested item
+  edits do not rerender its container or alter another binding's observation.
 
 From here, explore arrays, async defaults, validation, and composition.

@@ -12,7 +12,7 @@ export class ReactiveOptions<TOptions extends object> {
   readonly #cache
 
   constructor(resolve: () => TOptions) {
-    this.#cache = createCache(() => ({ ...resolve() }))
+    this.#cache = createCache(() => resolve())
   }
 
   @dependentKeyCompat

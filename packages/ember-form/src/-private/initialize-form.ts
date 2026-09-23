@@ -4,6 +4,11 @@ import ArrayField from '../components/array-field.gts'
 import Field from '../components/field.gts'
 import FormGroup from '../components/form-group.gts'
 import Subscribe from '../components/subscribe.gts'
+import {
+  adaptFormOptions,
+  CallbackViewRegistry,
+  EmberFormHandle,
+} from './ember-bindings.ts'
 import { ReactiveOptions } from './reactive-options.ts'
 
 import type { FormOptions } from '@tanstack/form-core'
@@ -15,18 +20,19 @@ export interface InternalEmberFormApi
 
 export function attachEmberFormComponents(
   form: AnyInternalFormApi,
+  publicForm: AnyInternalFormApi = form,
 ): InternalEmberFormApi {
   const emberForm = form as InternalEmberFormApi
 
   emberForm.Field = class BoundField extends Field {
     override get form(): AnyInternalFormApi {
-      return form
+      return publicForm
     }
   } as never
 
   emberForm.ArrayField = class BoundArrayField extends ArrayField {
     override get form(): AnyInternalFormApi {
-      return form
+      return publicForm
     }
   } as never
 
@@ -38,7 +44,7 @@ export function attachEmberFormComponents(
 
   emberForm.FormGroup = class BoundFormGroup extends FormGroup {
     override get form(): AnyInternalFormApi {
-      return form
+      return publicForm
     }
   } as never
 
@@ -48,7 +54,7 @@ export function attachEmberFormComponents(
 export function initializeForm(
   options: FormOptions<any, any, any, unknown>,
 ): InternalEmberFormApi {
-  return attachEmberFormComponents(new InternalFormApi(options))
+  return new InternalFormApi(options) as InternalEmberFormApi
 }
 
 export function createInternalForm(
@@ -63,18 +69,35 @@ export function createInternalForm(
   const reactive =
     typeof options === 'function' ? new ReactiveOptions(options) : undefined
   const initialOptions = typeof options === 'function' ? reactive!.value : options
-  const form = initialize(initialOptions)
-  const stop = reactive?.subscribe(parent, (next) => form._update(next))
+  let handle: EmberFormHandle | undefined
+  const callbackViews = new CallbackViewRegistry()
+  const resolveHandle = (() => handle) as (() => EmberFormHandle | undefined) & {
+    callbackViews?: CallbackViewRegistry
+  }
+  resolveHandle.callbackViews = callbackViews
+  const core = initialize(
+    adaptFormOptions(initialOptions as never, resolveHandle) as never,
+  )
+  handle = new EmberFormHandle(parent, core, callbackViews)
+  callbackViews.setHandle(handle)
+  attachEmberFormComponents(
+    core,
+    handle.public as unknown as AnyInternalFormApi,
+  )
+  const stop = reactive?.subscribe(parent, (next) =>
+    core._update(adaptFormOptions(next as never, resolveHandle) as never),
+  )
   let unmount: () => void
   try {
-    unmount = form.mount()
+    unmount = core.mount()
   } catch (error) {
     stop?.()
+    handle.destroy()
     throw error
   }
   registerDestructor(parent, () => {
     stop?.()
     unmount()
   })
-  return form
+  return handle.public as unknown as InternalEmberFormApi
 }

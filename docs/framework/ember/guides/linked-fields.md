@@ -49,12 +49,12 @@ const confirmPasswordValidators: FieldValidators<
 ];
 
 export default class PasswordForm extends Component {
-  form = createForm(this, {
+  form = createForm(this, () => ({
     defaultValues: {
       password: '',
       confirmPassword: '',
     } satisfies PasswordValues,
-  });
+  }));
 
   updateText = (
     field: { handleChange(value: string): void },

@@ -32,7 +32,7 @@ import { createForm } from '@tanstack/ember-form';
 import { peopleOptions } from './shared-form';
 
 export default class PeoplePage extends Component {
-  form = createForm(this, peopleOptions);
+  form = createForm(this, () => peopleOptions);
 
   <template>
     <this.form.Field @name="firstName" as |field|>
@@ -286,11 +286,11 @@ import { on } from '@ember/modifier';
 import { createForm } from '@tanstack/ember-form';
 
 export default class AccountSection extends Component {
-  form = createForm(this, {
+  form = createForm(this, () => ({
     defaultValues: {
       account: { password: '', roles: [] as string[] },
     },
-  });
+  }));
 
   updateText = (field: { handleChange(value: string): void }, event: Event) =>
     field.handleChange((event.target as HTMLInputElement).value);
@@ -337,10 +337,10 @@ import ChildFields from './child-fields.gts';
 import { peopleOptions } from './shared-form';
 
 export default class PeoplePage extends Component {
-  form = createForm(this, {
+  form = createForm(this, () => ({
     ...peopleOptions,
     onSubmit: ({ value }) => console.log(value),
-  });
+  }));
 
   submit = (event: SubmitEvent): void => {
     event.preventDefault();

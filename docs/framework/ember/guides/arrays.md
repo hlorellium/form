@@ -27,9 +27,11 @@ the next array. The form API does not prescribe the picker UI.
 ## Rendering fields in an array
 
 Use `ArrayField` when each array item has its own fields or when items can be
-added, removed, or reordered. `ArrayField` observes array structure (length and
-structural version), while each nested `Field` observes its own value and
-metadata. Editing an item therefore does not invalidate the array container.
+added, removed, or reordered. An array-only `ArrayField` binding observes array
+structure (length and structural version), while each nested `Field` observes its
+own value and metadata. Editing an item therefore does not invalidate the array
+container. Ordinary and array bindings are independent, so a whole-array `Field`
+cannot broaden the `ArrayField` observation.
 
 ```gts
 import Component from '@glimmer/component';
@@ -45,12 +47,12 @@ interface Person {
 const personName = (index: number): string => `people[${index}].name`;
 
 export default class PeopleForm extends Component {
-  form = createForm(this, {
+  form = createForm(this, () => ({
     defaultValues: {
       people: [] as Array<Person>,
     },
     onSubmit: ({ value }) => console.log(value),
-  });
+  }));
 
   addPerson = (field: { pushValue(value: Person): void }): void => {
     field.pushValue({ name: '', age: 0 });
@@ -117,9 +119,10 @@ that distinction matters.
 
 ## Observing array state
 
-`ArrayField` deliberately does not rerender its block for an edit to a nested
-item. Keep item controls in nested `Field` blocks, and subscribe separately to
-array-level errors or metadata when the surrounding UI needs them:
+An array-only `ArrayField` binding does not rerender its block for an edit to a
+nested item. Ordinary and array bindings remain independent. Keep item controls
+in nested `Field` blocks, and subscribe separately to array-level errors or
+metadata when the surrounding UI needs them:
 
 ```gts
 import { Subscribe } from '@tanstack/ember-form';
@@ -141,5 +144,5 @@ const selectArrayErrors = (state: {
 </this.form.ArrayField>
 ```
 
-The separate subscription is a small amount of wiring in exchange for avoiding
-an array-container rerender on every item edit.
+For an array-only binding, the separate subscription avoids an array-container
+rerender on every item edit.

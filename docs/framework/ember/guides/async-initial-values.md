@@ -31,12 +31,12 @@ interface EditorSignature {
 }
 
 export default class PersonEditor extends Component<EditorSignature> {
-  form = createForm(this, {
+  form = createForm(this, () => ({
     defaultValues: this.args.person,
     onSubmit: async ({ value }) => {
       console.log(value);
     },
-  });
+  }));
 
   updateText = (field: { handleChange(value: string): void }, event: Event) =>
     field.handleChange((event.target as HTMLInputElement).value);

@@ -7,6 +7,7 @@ import type {
   DeepValue,
   FieldApi,
   FieldApiOptions,
+  FieldState,
   FieldValidators,
   FormApi,
   FormErrorTypes,
@@ -18,7 +19,7 @@ import type {
   ToFieldError,
   ToFormGroupErrorTypes,
 } from '@tanstack/form-core'
-import type { SelectorSource } from './-private/select-atom.ts'
+import type { SelectorSourceInput } from './-private/select-atom.ts'
 
 export type EmberFieldComponents = Record<string, ComponentLike<any>>
 
@@ -30,7 +31,10 @@ export type EmberFieldApi<
   TFormErrorTypes extends FormErrorTypes,
   TFieldComponents extends EmberFieldComponents,
 > = FieldApi<TFieldName, TFieldValue, TFieldError, TFormData, TFormErrorTypes> &
-  TFieldComponents
+  TFieldComponents & {
+    /** The current complete field snapshot. */
+    readonly state: FieldState<TFieldValue, TFieldError>
+  }
 
 export interface EmberFormFieldComponent<
   TFormData,
@@ -295,7 +299,7 @@ export interface EmberFormSubscribeComponent<
 
 export interface EmberSubscribeSignature<TSource, TSelected> {
   Args: {
-    source: SelectorSource<TSource>
+    source: SelectorSourceInput<TSource>
     selector: (value: TSource) => TSelected
     when?: (selected: NoInfer<TSelected>) => boolean
   }
@@ -545,7 +549,83 @@ export type EmberFormApi<
   TFormErrorTypes extends FormErrorTypes,
   TComponents extends EmberFieldComponents = Record<never, never>,
 > = FormApi<TFormData, TFormErrorTypes> &
-  EmberTanStackFormComponents<TFormData, TFormErrorTypes, TComponents>
+  EmberTanStackFormComponents<TFormData, TFormErrorTypes, TComponents> & {
+    /** Create a stable, form-owned field lens from a tracked options factory. */
+    field<
+      TFieldName extends DeepKeys<TFormData>,
+      const TFieldValidators extends FieldValidators<
+        TFormData,
+        TFieldName,
+        DeepValue<TFormData, TFieldName>
+      >,
+    >(
+      options: () => FieldApiOptions<
+        TFormData,
+        TFieldName,
+        DeepValue<TFormData, TFieldName>,
+        TFieldValidators,
+        never,
+        TFormData,
+        TFormErrorTypes
+      >,
+    ): EmberFieldApi<
+      TFieldName,
+      DeepValue<TFormData, TFieldName>,
+      ToFieldError<NoInfer<TFieldValidators>, never, TFormErrorTypes>,
+      TFormData,
+      TFormErrorTypes,
+      TComponents
+    >
+    /** Create a structural-observation lens for an array field. */
+    arrayField<
+      TFieldName extends DeepKeysWhereValueIncludes<TFormData, ReadonlyArray<any>>,
+      const TFieldValidators extends FieldValidators<
+        TFormData,
+        TFieldName,
+        DeepValue<TFormData, TFieldName>
+      >,
+    >(
+      options: () => FieldApiOptions<
+        TFormData,
+        TFieldName,
+        DeepValue<TFormData, TFieldName>,
+        TFieldValidators,
+        never,
+        TFormData,
+        TFormErrorTypes
+      >,
+    ): EmberFieldApi<
+      TFieldName,
+      DeepValue<TFormData, TFieldName>,
+      ToFieldError<NoInfer<TFieldValidators>, never, TFormErrorTypes>,
+      TFormData,
+      TFormErrorTypes,
+      TComponents
+    >
+    formGroup<
+      TGroupName extends DeepKeys<TFormData>,
+      TGroupValue extends DeepValue<TFormData, TGroupName>,
+      const TGroupValidators extends FormGroupValidators<TGroupValue>,
+    >(
+      options: () => Omit<
+        FormGroupOptions<
+          TFormData,
+          TGroupName,
+          TGroupValue,
+          TGroupValidators,
+          TFormErrorTypes
+        >,
+        'form'
+      >,
+    ): EmberFormGroupApi<
+      TFormData,
+      TGroupName,
+      TGroupValue,
+      ToFormGroupErrorTypes<NoInfer<TGroupValidators>>,
+      TFormErrorTypes,
+      TComponents
+    >
+  }
 
 /**
  * An Ember form API whose form data, error, and field-component types are
@@ -568,5 +648,4 @@ export type EmberFormApi<
  * }
  * ```
  */
-export type AnyEmberFormApi = AnyFormApi &
-  EmberTanStackFormComponents<any, any, any>
+export type AnyEmberFormApi = EmberFormApi<any, any, any>

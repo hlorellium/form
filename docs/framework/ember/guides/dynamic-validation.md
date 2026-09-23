@@ -41,10 +41,10 @@ import Component from '@glimmer/component';
 import { createForm } from '@tanstack/ember-form';
 
 export default class NameForm extends Component {
-  form = createForm(this, {
+  form = createForm(this, () => ({
     defaultValues: { firstName: '', lastName: '' },
     validators: [requiredAfterSubmit],
-  });
+  }));
 }
 ```
 
