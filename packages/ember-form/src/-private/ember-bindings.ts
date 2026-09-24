@@ -9,11 +9,19 @@ import { ReactiveOptions } from './reactive-options.ts'
 
 import type { ReadonlyAtom } from '@tanstack/store'
 import type {
+  AnyFieldApiOptions,
   AnyInternalFieldApi,
   AnyInternalFormApi,
   AnyInternalFormGroupApi,
 } from '@tanstack/form-core/internals'
+import type { FormGroupOptions } from '@tanstack/form-core'
 import type { EmberFormApi } from '../form-api-types.ts'
+
+/** FormGroup options factories omit `form` (bound by the Ember handle). */
+type AnyEmberFormGroupOptions = Omit<
+  FormGroupOptions<any, any, any, any, any>,
+  'form'
+>
 interface Observation<T> {
   readonly current: T
   destroy(): void
@@ -217,7 +225,7 @@ function observedState(
 
 function proxyMeta(
   atom: ReadonlyAtom<unknown>,
-  getMeta: () => Record<PropertyKey, unknown>,
+  getMeta: () => object,
   observations: Set<Observation<unknown>>,
   observe: typeof observed = observed,
 ): object {
@@ -251,7 +259,7 @@ function proxyMeta(
 
 function proxyState(
   atom: ReadonlyAtom<unknown>,
-  getState: () => Record<PropertyKey, unknown>,
+  getState: () => object,
   observations: Set<Observation<unknown>>,
   observe: typeof observed = observed,
 ): object {
@@ -305,7 +313,7 @@ class CallbackFieldView {
   get meta(): object {
     this.#meta ??= proxyMeta(
       this.#raw.atom,
-      () => this.#raw.meta as Record<PropertyKey, unknown>,
+      () => this.#raw.meta,
       this.#registry.observations,
       this.#registry.observe,
     )
@@ -524,7 +532,7 @@ class FieldBinding {
   readonly #observations = new Set<Observation<unknown>>()
   readonly #fieldObservations = new Map<string, Observation<unknown>>()
   readonly #options: ReactiveOptions<any>
-  #activeOptions: Record<string, unknown>
+  #activeOptions: AnyFieldApiOptions
   #field: AnyInternalFieldApi
   #name: string
   #stopOptions: (() => void) | undefined
@@ -534,7 +542,7 @@ class FieldBinding {
 
   constructor(
     form: EmberFormHandle,
-    options: () => Record<string, unknown>,
+    options: () => AnyFieldApiOptions,
     array: boolean,
   ) {
     this.#form = form
@@ -598,7 +606,7 @@ class FieldBinding {
     if (this.#metaProxy === undefined) {
       this.#metaProxy = proxyMeta(
         this.#field.atom,
-        () => this.#field.meta as Record<PropertyKey, unknown>,
+        () => this.#field.meta,
         this.#observations,
       )
     }
@@ -656,7 +664,7 @@ class FieldBinding {
     return observation as Observation<T>
   }
 
-  #create(options: Record<string, unknown>): AnyInternalFieldApi {
+  #create(options: AnyFieldApiOptions): AnyInternalFieldApi {
     const { name, ...fieldOptions } = options
     const adaptedOptions = adaptFieldOptions(fieldOptions, () => this.#form)
     const field = this.#form.core._getOrCreateFieldApi(
@@ -676,7 +684,7 @@ class FieldBinding {
     return field
   }
 
-  #reconcile(options: Record<string, unknown>): void {
+  #reconcile(options: AnyFieldApiOptions): void {
     const nextName = String(options.name)
     if (this.#field._isKilled && !hasArrayPath(this.#form.core, nextName)) {
       this.#activeOptions = { ...options }
@@ -706,7 +714,7 @@ class FieldBinding {
 class GroupBinding {
   readonly #form: EmberFormHandle
   readonly #options: ReactiveOptions<any>
-  #activeOptions: Record<string, unknown>
+  #activeOptions: AnyEmberFormGroupOptions
   readonly #observations = new Set<Observation<unknown>>()
   readonly #stateObservations = new Map<PropertyKey, Observation<unknown>>()
   readonly #metaObservations = new Map<PropertyKey, Observation<unknown>>()
@@ -717,7 +725,7 @@ class GroupBinding {
   #stopOptions: (() => void) | undefined
   #stopReset: (() => void) | undefined
 
-  constructor(form: EmberFormHandle, options: () => Record<string, unknown>) {
+  constructor(form: EmberFormHandle, options: () => AnyEmberFormGroupOptions) {
     this.#form = form
     this.#options = form.options(options)
     this.#activeOptions = { ...this.#options.value }
@@ -774,7 +782,7 @@ class GroupBinding {
     return this.#snapshotProxy(
       this.#metaObservations,
       (key) => this.#observation((state) => (state as any).meta[key]),
-      () => Reflect.ownKeys(this.#group.state.meta),
+      () => Reflect.ownKeys(Object(this.#group.state.meta)),
     )
   }
 
@@ -795,7 +803,7 @@ class GroupBinding {
   #snapshotProxy(
     cache: Map<PropertyKey, Observation<unknown>>,
     create: (key: PropertyKey) => Observation<unknown>,
-    keys: () => PropertyKey[],
+    keys: () => Array<string | symbol>,
   ): object {
     return new Proxy(
       {},
@@ -808,7 +816,7 @@ class GroupBinding {
           }
           return observation.current
         },
-        ownKeys: keys,
+        ownKeys: () => keys(),
         getOwnPropertyDescriptor: () => ({ enumerable: true, configurable: true }),
       },
     )
@@ -830,13 +838,13 @@ class GroupBinding {
     this.#observations.add(observation)
     return observation
   }
-  #create(options: Record<string, unknown>): AnyInternalFormGroupApi {
+  #create(options: AnyEmberFormGroupOptions): AnyInternalFormGroupApi {
     return new InternalFormGroupApi({
       ...adaptGroupOptions(options, () => this.#form),
       form: this.#form.public,
     } as never)
   }
-  #replace(options: Record<string, unknown>): void {
+  #replace(options: AnyEmberFormGroupOptions): void {
     const previous = this.#group
     this.#observations.forEach((observation) => observation.destroy())
     this.#observations.clear()
@@ -850,7 +858,7 @@ class GroupBinding {
     this.#group.mount()
     this.#generation.current++
   }
-  #reconcile(options: Record<string, unknown>): void {
+  #reconcile(options: AnyEmberFormGroupOptions): void {
     const nextName = String(options.name)
     if (nextName !== String(this.#group.name)) {
       this.#replace(options)
@@ -916,11 +924,11 @@ export class EmberFormHandle {
         return true
       },
     }) as EmberFormApi<any, any>
-    ;(core as any).field = (options: () => Record<string, unknown>) =>
+    ;(core as any).field = (options: () => AnyFieldApiOptions) =>
       this.field(options)
-    ;(core as any).arrayField = (options: () => Record<string, unknown>) =>
+    ;(core as any).arrayField = (options: () => AnyFieldApiOptions) =>
       this.arrayField(options)
-    ;(core as any).formGroup = (options: () => Record<string, unknown>) =>
+    ;(core as any).formGroup = (options: () => AnyEmberFormGroupOptions) =>
       this.formGroup(options)
     const getOrCreateField = core._getOrCreateFieldApi.bind(core)
     ;(core as any)._getOrCreateFieldApi = (
@@ -951,13 +959,13 @@ export class EmberFormHandle {
     return new ReactiveOptions(resolve)
   }
 
-  field(options: () => Record<string, unknown>): unknown {
+  field(options: () => AnyFieldApiOptions): unknown {
     return new FieldBinding(this, options, false)
   }
-  arrayField(options: () => Record<string, unknown>): unknown {
+  arrayField(options: () => AnyFieldApiOptions): unknown {
     return new FieldBinding(this, options, true)
   }
-  formGroup(options: () => Record<string, unknown>): unknown {
+  formGroup(options: () => AnyEmberFormGroupOptions): unknown {
     const binding = new GroupBinding(this, options)
     const publicGroup = new Proxy(binding, {
       get: (target, key) => {

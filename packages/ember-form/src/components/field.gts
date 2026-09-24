@@ -2,7 +2,10 @@ import Component from '@glimmer/component';
 
 import type Owner from '@ember/owner';
 import type { FieldApiOptions } from '@tanstack/form-core';
-import type { AnyInternalFormApi } from '@tanstack/form-core/internals';
+import type {
+  AnyFieldApiOptions,
+  AnyInternalFormApi,
+} from '@tanstack/form-core/internals';
 
 interface InternalFieldSignature {
   Args: FieldApiOptions<any, any, any, any, any, any, any> & {
@@ -11,6 +14,12 @@ interface InternalFieldSignature {
   Blocks: { default: [field: any] };
 }
 
+/** Form handle surface Field uses to create reactive lenses. */
+export type EmberFormWithFieldLenses = AnyInternalFormApi & {
+  field(options: () => AnyFieldApiOptions): unknown;
+  arrayField(options: () => AnyFieldApiOptions): unknown;
+};
+
 export default class Field extends Component<InternalFieldSignature> {
   #field: any;
 
@@ -18,8 +27,10 @@ export default class Field extends Component<InternalFieldSignature> {
     super(owner, args);
   }
 
-  get form(): AnyInternalFormApi {
-    if (this.args.form !== undefined) return this.args.form;
+  get form(): EmberFormWithFieldLenses {
+    if (this.args.form !== undefined) {
+      return this.args.form as EmberFormWithFieldLenses;
+    }
     throw new Error('Field must be bound to an Ember form instance');
   }
 
@@ -27,16 +38,18 @@ export default class Field extends Component<InternalFieldSignature> {
     return false;
   }
 
-  protected get fieldOptions(): InternalFieldSignature['Args'] {
-    return this.args;
+  /** Field options for form-core; omit the Ember `@form` arg. */
+  protected get fieldOptions(): AnyFieldApiOptions {
+    const { form: _form, ...options } = this.args;
+    return options;
   }
 
   get field(): any {
     if (this.#field === undefined) {
-      const factory = () => this.fieldOptions as Record<string, unknown>;
+      const factory = () => this.fieldOptions;
       this.#field = this.arrayBinding
-        ? (this.form as any).arrayField(factory)
-        : (this.form as any).field(factory);
+        ? this.form.arrayField(factory)
+        : this.form.field(factory);
     }
     return this.#field;
   }

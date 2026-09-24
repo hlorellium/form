@@ -1,11 +1,12 @@
 import Component from '@glimmer/component';
 import ArrayField from './array-field.gts';
-import Field from './field.gts';
+import Field, { type EmberFormWithFieldLenses } from './field.gts';
 import Subscribe from './subscribe.gts';
 
 import type Owner from '@ember/owner';
-import type { FieldApiOptions, FormGroupOptions } from '@tanstack/form-core';
+import type { FormGroupOptions } from '@tanstack/form-core';
 import type {
+  AnyFieldApiOptions,
   AnyInternalFormApi,
   InternalFormGroupApi as InternalFormGroupApiType,
 } from '@tanstack/form-core/internals';
@@ -68,44 +69,24 @@ function attachEmberFormGroupComponents(
   const result = group as FormGroupWithComponents;
 
   result.Field = class GroupField extends Field {
-    override get form(): AnyInternalFormApi {
-      return form;
+    override get form(): EmberFormWithFieldLenses {
+      return form as EmberFormWithFieldLenses;
     }
 
-    protected override get fieldOptions(): FieldApiOptions<
-      any,
-      any,
-      any,
-      any,
-      any,
-      any,
-      any
-    > {
-      return group._getFormFieldOptions(
-        { ...this.args },
-        mergeFieldOptions,
-      ) as never;
+    protected override get fieldOptions(): AnyFieldApiOptions {
+      const { form: _form, ...options } = this.args;
+      return group._getFormFieldOptions(options, mergeFieldOptions);
     }
   };
 
   result.ArrayField = class GroupArrayField extends ArrayField {
-    override get form(): AnyInternalFormApi {
-      return form;
+    override get form(): EmberFormWithFieldLenses {
+      return form as EmberFormWithFieldLenses;
     }
 
-    protected override get fieldOptions(): FieldApiOptions<
-      any,
-      any,
-      any,
-      any,
-      any,
-      any,
-      any
-    > {
-      return group._getFormFieldOptions(
-        { ...this.args },
-        mergeFieldOptions,
-      ) as never;
+    protected override get fieldOptions(): AnyFieldApiOptions {
+      const { form: _form, ...options } = this.args;
+      return group._getFormFieldOptions(options, mergeFieldOptions);
     }
   };
 
