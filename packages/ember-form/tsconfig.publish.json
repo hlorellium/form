@@ -1,0 +1,11 @@
+{
+  "extends": "@ember/library-tsconfig",
+  "include": ["./src/**/*"],
+  "compilerOptions": {
+    "allowJs": true,
+    "declarationDir": "declarations",
+    // Match Rollup's srcDir so declarations mirror the published JS layout.
+    "rootDir": "./src",
+    "types": ["ember-source/types", "@glint/ember-tsc/types"]
+  }
+}

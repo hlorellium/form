@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ember Form tests</title>
+  </head>
+  <body>
+    <div id="qunit"></div>
+    <div id="qunit-fixture">
+      <div id="ember-testing-container">
+        <div id="ember-testing"></div>
+      </div>
+    </div>
+    <script src="/testem.js" integrity="" data-embroider-ignore></script>
+    <script type="module">
+      import 'ember-testing'
+    </script>
+    <script type="module">
+      import { start } from './test-helper.js'
+      import.meta.glob('./**/*.{js,ts,gjs,gts}', { eager: true })
+      start()
+    </script>
+  </body>
+</html>

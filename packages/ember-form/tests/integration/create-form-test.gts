@@ -1,0 +1,558 @@
+import Component from '@glimmer/component';
+import { destroy } from '@ember/destroyable';
+import { tracked } from '@glimmer/tracking';
+import { click, fillIn, render, settled } from '@ember/test-helpers';
+import { module, test } from 'qunit';
+import { setupRenderingTest } from 'ember-qunit';
+import {
+  ArrayField,
+  createForm,
+  Field,
+  useSelector,
+  type EmberFormType,
+  type FormGroupValidators,
+} from '@tanstack/ember-form';
+import { formOptions } from '@tanstack/form-core';
+import {
+  handleInput,
+  required,
+  selectName,
+  whenPresent,
+  type Profile,
+} from '../helpers.ts';
+
+const reactiveOptions = formOptions({
+  defaultValues: { name: 'Grace', email: 'ada@example.com' } as Profile,
+});
+
+type ReactiveForm = EmberFormType<typeof reactiveOptions>;
+
+const selectEmail = (state: { values: Profile }) => state.values.email;
+
+interface ArrayItem {
+  label: string;
+}
+
+interface ArrayFormValues {
+  items: Array<ArrayItem>;
+}
+
+const arrayOptions = formOptions({
+  defaultValues: {
+    items: [{ label: 'first' }, { label: 'second' }],
+  } as ArrayFormValues,
+});
+
+type ArrayForm = EmberFormType<typeof arrayOptions>;
+
+let arrayRenderCount = 0;
+
+interface GroupFormValues {
+  guestDetails: {
+    name: string;
+    tags: Array<{ label: string }>;
+    address: { city: string };
+  };
+}
+
+type GuestDetails = GroupFormValues['guestDetails'];
+
+const groupOptions = formOptions({
+  defaultValues: {
+    guestDetails: {
+      name: '',
+      tags: [{ label: 'first' }],
+      address: { city: 'London' },
+    },
+  } as GroupFormValues,
+});
+
+type GroupForm = EmberFormType<typeof groupOptions>;
+
+interface GroupBindingsSignature {
+  Args: { form: GroupForm };
+}
+
+class GroupBindings extends Component<GroupBindingsSignature> {
+  @tracked showGroup = true;
+  @tracked allowSubmit = false;
+  @tracked submittedBy = '';
+
+  invalidValidators: FormGroupValidators<GuestDetails> = [
+    {
+      triggers: [],
+      run: () => ({ fields: { name: 'Group name is required' } }),
+    },
+  ];
+
+  validValidators: FormGroupValidators<GuestDetails> = [
+    { triggers: [], run: () => null },
+  ];
+
+  get validators(): FormGroupValidators<GuestDetails> {
+    return this.allowSubmit
+      ? this.validValidators
+      : this.invalidValidators;
+  }
+
+  get submitHandler(): (context: { value: GuestDetails }) => void {
+    return this.allowSubmit
+      ? this.updatedSubmit
+      : this.initialSubmit;
+  }
+
+  selectAttempts = (state: { submissionAttempts: number }): number =>
+    state.submissionAttempts;
+
+  initialSubmit = ({ value }: { value: GuestDetails }): void => {
+    this.submittedBy = `initial:${value.name}`;
+  };
+
+  updatedSubmit = ({ value }: { value: GuestDetails }): void => {
+    this.submittedBy = `updated:${value.name}`;
+  };
+
+  enableSubmit = (): void => {
+    this.allowSubmit = true;
+  };
+
+  disableSubmit = (): void => {
+    this.allowSubmit = false;
+  };
+
+  hideGroup = (): void => {
+    this.showGroup = false;
+  };
+
+  <template>
+    {{#if this.showGroup}}
+      <this.args.form.FormGroup
+        @name="guestDetails"
+        @validators={{this.validators}}
+        @onSubmit={{this.submitHandler}}
+        as |group|
+      >
+        <output id="group-state-name">{{group.state.values.name}}</output>
+
+        <group.Field @name="name" as |field|>
+          <input
+            id="group-name"
+            value={{field.value}}
+            {{on "input" (fn handleInput field)}}
+          />
+          <output id="group-field">{{field.name}}:{{field.value}}</output>
+          {{#each field.errors as |error|}}
+            <em class="group-error">{{error.message}}</em>
+          {{/each}}
+        </group.Field>
+
+        <group.ArrayField @name="tags" as |field|>
+          <output id="group-array">{{field.name}}:{{field.value.length}}</output>
+        </group.ArrayField>
+
+        <group.Subscribe @selector={{this.selectAttempts}} as |attempts|>
+          <output id="group-attempts">{{attempts}}</output>
+        </group.Subscribe>
+
+        <this.args.form.FormGroup
+          @name="guestDetails.address"
+          as |nestedGroup|
+        >
+          <nestedGroup.Field @name="city" as |field|>
+            <output id="nested-field">{{field.name}}:{{field.value}}</output>
+          </nestedGroup.Field>
+        </this.args.form.FormGroup>
+
+        <button id="group-submit" type="button" {{on "click" group.handleSubmit}}>
+          Continue
+        </button>
+        <button id="group-reset" type="button" {{on "click" group.reset}}>
+          Reset
+        </button>
+      </this.args.form.FormGroup>
+    {{/if}}
+
+    <this.args.form.Field @name="guestDetails.name" as |field|>
+      <output id="root-group-field">{{field.value}}</output>
+      <output id="root-group-errors">{{field.errors.length}}</output>
+    </this.args.form.Field>
+    <output id="group-submitted">{{this.submittedBy}}</output>
+
+    <button id="enable-group-submit" type="button" {{on "click" this.enableSubmit}}>
+      Enable submit
+    </button>
+    <button id="disable-group-submit" type="button" {{on "click" this.disableSubmit}}>
+      Disable submit
+    </button>
+    <button id="hide-group" type="button" {{on "click" this.hideGroup}}>
+      Hide group
+    </button>
+  </template>
+}
+
+interface ArrayRenderProbeSignature {
+  Args: { value: Array<ArrayItem> };
+}
+
+class ArrayRenderProbe extends Component<ArrayRenderProbeSignature> {
+  get length(): number {
+    arrayRenderCount++;
+    return this.args.value.length;
+  }
+
+  <template><output id="array-length">{{this.length}}</output></template>
+}
+
+interface ArrayItemBindingSignature {
+  Args: { form: ArrayForm; index: number };
+}
+
+class ArrayItemBinding extends Component<ArrayItemBindingSignature> {
+  get name(): `items[${number}].label` {
+    return `items[${this.args.index}].label`;
+  }
+
+  get outputId(): string {
+    return `item-${this.args.index}`;
+  }
+
+  get blurId(): string {
+    return `blur-${this.args.index}`;
+  }
+
+  <template>
+    <this.args.form.Field @name={{this.name}} as |itemField|>
+      <output id={{this.outputId}}>
+        {{itemField.value}}|{{if itemField.meta.isTouched "touched" "untouched"}}
+      </output>
+      <button
+        id={{this.blurId}}
+        type="button"
+        {{on "click" itemField.handleBlur}}
+      >
+        Blur
+      </button>
+    </this.args.form.Field>
+  </template>
+}
+
+interface ReactiveBindingsSignature {
+  Args: { form: ReactiveForm };
+}
+
+class ReactiveBindings extends Component<ReactiveBindingsSignature> {
+  @tracked fieldName: 'name' | 'email' = 'name';
+  @tracked selector = selectName;
+
+  switchBindings = () => {
+    this.fieldName = 'email';
+    this.selector = selectEmail;
+  };
+
+  <template>
+    <this.args.form.Field @name={{this.fieldName}} as |field|>
+      <output id="dynamic-field">{{field.name}}:{{field.value}}</output>
+    </this.args.form.Field>
+    <this.args.form.Subscribe @selector={{this.selector}} as |selected|>
+      <output id="dynamic-selection">{{selected}}</output>
+    </this.args.form.Subscribe>
+    <button id="switch" type="button" {{on "click" this.switchBindings}}>
+      Switch
+    </button>
+  </template>
+}
+
+module('Integration | createForm v2', function (hooks) {
+  setupRenderingTest(hooks);
+
+  test('creates an instance before rendering and cleans selector ownership', async function (assert) {
+    const formOwner = {};
+    const selectorOwner = {};
+    let submitted: Profile | undefined;
+    const form = createForm(formOwner, {
+      defaultValues: { name: '', email: '' } as Profile,
+      onSubmit: ({ value }) => {
+        submitted = value;
+      },
+    });
+    const name = useSelector(selectorOwner, form.atom, selectName);
+
+    form.setFieldValue('name', 'Grace');
+    assert.strictEqual(name.current, 'Grace', 'selection reads synchronously');
+
+    await form.handleSubmit();
+    assert.deepEqual(submitted, { name: 'Grace', email: '' });
+
+    destroy(selectorOwner);
+    form.setFieldValue('name', 'Ada');
+    await Promise.resolve();
+    assert.strictEqual(name.current, 'Grace', 'destroyed selection does no work');
+
+    destroy(formOwner);
+  });
+
+  test('binds v2 fields and subscriptions to one explicit form instance', async function (assert) {
+    const owner = {};
+    const form = createForm(owner, {
+      defaultValues: { name: '', email: '' } as Profile,
+    });
+
+    await render(<template>
+      <form.Field @name="name" @validators={{required}} as |field|>
+        <input
+          id="name"
+          value={{field.value}}
+          {{on "input" (fn handleInput field)}}
+        />
+        <output id="field-value">{{field.value}}</output>
+        {{#each field.errors as |error|}}
+          <em class="error">{{error.message}}</em>
+        {{/each}}
+      </form.Field>
+
+      <form.Subscribe
+        @selector={{selectName}}
+        @when={{whenPresent}}
+        as |name|
+      >
+        <output id="selected">{{name}}</output>
+      </form.Subscribe>
+    </template>);
+
+    assert.dom('#selected').doesNotExist();
+
+    await fillIn('#name', 'Grace');
+    assert.dom('#field-value').hasText('Grace');
+    assert.dom('#selected').hasText('Grace');
+    assert.dom('.error').doesNotExist();
+
+    await fillIn('#name', '');
+    assert.dom('.error').hasText('Name is required');
+
+    form.reset({ name: 'Reset', email: 'reset@example.com' });
+    await settled();
+    assert.dom('#field-value').hasText('Reset', 'field rebinds after reset');
+    assert.dom('#selected').hasText('Reset');
+
+    destroy(owner);
+  });
+
+  test('binds standalone fields through their form argument', async function (assert) {
+    const owner = {};
+    const form = createForm(owner, {
+      defaultValues: {
+        name: 'Grace',
+        items: [{ label: 'first' }],
+      },
+    });
+
+    await render(<template>
+      <Field @form={{form}} @name="name" as |field|>
+        <output id="standalone-field">{{field.value}}</output>
+      </Field>
+      <ArrayField @form={{form}} @name="items" as |field|>
+        <output id="standalone-array">{{field.value.length}}</output>
+      </ArrayField>
+    </template>);
+
+    assert.dom('#standalone-field').hasText('Grace');
+    assert.dom('#standalone-array').hasText('1');
+
+    form.setFieldValue('name', 'Ada');
+    form.pushFieldValue('items', { label: 'second' });
+    await settled();
+
+    assert.dom('#standalone-field').hasText('Ada');
+    assert.dom('#standalone-array').hasText('2');
+
+    destroy(owner);
+  });
+
+  test('rebinds fields and selectors when component arguments change', async function (assert) {
+    const owner = {};
+    const form = createForm(owner, reactiveOptions);
+
+    await render(<template><ReactiveBindings @form={{form}} /></template>);
+    assert.dom('#dynamic-field').hasText('name:Grace');
+    assert.dom('#dynamic-selection').hasText('Grace');
+
+    await click('#switch');
+    assert.dom('#dynamic-field').hasText('email:ada@example.com');
+    assert.dom('#dynamic-selection').hasText('ada@example.com');
+
+    destroy(owner);
+  });
+
+  test('binds array structure while nested fields retain core value and metadata association', async function (assert) {
+    const owner = {};
+    const defaults: ArrayFormValues = {
+      items: [{ label: 'first' }, { label: 'second' }],
+    };
+    const form = createForm(owner, arrayOptions);
+    arrayRenderCount = 0;
+
+    await render(<template>
+      <form.ArrayField @name="items" as |arrayField|>
+        <ArrayRenderProbe @value={{arrayField.value}} />
+        {{#each arrayField.value as |_item index|}}
+          <ArrayItemBinding @form={{form}} @index={{index}} />
+        {{/each}}
+      </form.ArrayField>
+    </template>);
+
+    const initialArrayRenderCount = arrayRenderCount;
+    form.setFieldValue('items[0].label', 'edited', {
+      markAsDirty: false,
+      markAsTouched: false,
+    });
+    await settled();
+    assert.dom('#item-0').hasText('edited|untouched');
+    assert.strictEqual(
+      arrayRenderCount,
+      initialArrayRenderCount,
+      'an item edit does not invalidate array structure',
+    );
+
+    await click('#blur-0');
+    const beforeMoveRenderCount = arrayRenderCount;
+    form.moveFieldValue('items', 0, 1);
+    await settled();
+    assert.true(
+      arrayRenderCount > beforeMoveRenderCount,
+      'same-length movement invalidates array structure by version',
+    );
+    assert.dom('#item-0').hasText('second|untouched');
+    assert.dom('#item-1').hasText('edited|touched');
+
+    const beforeInsertRenderCount = arrayRenderCount;
+    form.insertFieldValue('items', 0, { label: 'inserted' });
+    await settled();
+    assert.true(
+      arrayRenderCount > beforeInsertRenderCount,
+      'length changes invalidate array structure',
+    );
+    assert.dom('#item-0').hasText('inserted|untouched');
+    assert.dom('#item-2').hasText('edited|touched');
+
+    form.removeFieldValue('items', 1);
+    await settled();
+    assert.dom('#item-1').hasText('edited|touched');
+
+    const beforeReplacementRenderCount = arrayRenderCount;
+    form.setFieldValue('items', [
+      { label: 'replacement-a' },
+      { label: 'replacement-b' },
+    ]);
+    await settled();
+    assert.true(
+      arrayRenderCount > beforeReplacementRenderCount,
+      'same-length replacement invalidates array structure by version',
+    );
+    assert.dom('#array-length').hasText('2');
+    assert.dom('#item-0').hasText('replacement-a|untouched');
+    assert.dom('#item-1').hasText('replacement-b|touched');
+
+    form.reset(defaults);
+    await settled();
+    assert.dom('#item-0').hasText('first|untouched');
+    assert.dom('#item-1').hasText('second|untouched');
+
+    destroy(owner);
+  });
+
+  test('binds scoped form groups to core state, submission, nesting, updates, reset, and cleanup', async function (assert) {
+    const owner = {};
+    const form = createForm(owner, groupOptions);
+
+    await render(<template><GroupBindings @form={{form}} /></template>);
+
+    assert.dom('#group-field').hasText('guestDetails.name:');
+    assert.dom('#group-array').hasText('guestDetails.tags:1');
+    assert
+      .dom('#nested-field')
+      .hasText('guestDetails.address.city:London');
+    assert.dom('#group-attempts').hasText('0');
+
+    await click('#group-submit');
+    assert.dom('.group-error').hasText('Group name is required');
+    assert.dom('#root-group-errors').hasText('1');
+    assert.dom('#group-attempts').hasText('1');
+
+    await click('#enable-group-submit');
+    await fillIn('#group-name', 'Grace');
+    assert
+      .dom('#group-state-name')
+      .hasText('Grace', 'yielded group state reacts to core value changes');
+    await click('#group-submit');
+    assert.dom('.group-error').doesNotExist();
+    assert
+      .dom('#group-submitted')
+      .hasText('updated:Grace', 'the replaced submit callback is used');
+    assert.deepEqual(
+      form.state.values.guestDetails,
+      {
+        name: 'Grace',
+        tags: [{ label: 'first' }],
+        address: { city: 'London' },
+      },
+      'group submission keeps values scoped to the core form',
+    );
+    assert.dom('#group-attempts').hasText('2');
+
+    await click('#group-reset');
+    assert.dom('#group-field').hasText('guestDetails.name:');
+    assert.dom('#group-attempts').hasText('0');
+
+    await fillIn('#group-name', 'Preserved');
+    await click('#disable-group-submit');
+    await click('#group-submit');
+    assert.dom('#root-group-errors').hasText('1');
+
+    await click('#hide-group');
+    assert.dom('#root-group-field').hasText('Preserved');
+    assert.dom('#root-group-errors').hasText('0');
+
+    destroy(owner);
+  });
+
+  test('surfaces onSubmit createValidationError on bound field and form errors', async function (assert) {
+    const owner = {};
+    const form = createForm(owner, {
+      defaultValues: { name: '', email: '' } as Profile,
+      onSubmit: ({ createValidationError }) =>
+        createValidationError({
+          fields: {
+            email: { message: 'Email is already registered' },
+          },
+          form: 'Could not save passenger',
+        }),
+    });
+    const selectFormErrors = (state: {
+      errors: Array<{ message: string }>;
+    }) => state.errors;
+
+    await render(<template>
+      <form.Field @name="email" as |field|>
+        {{#each field.errors as |error|}}
+          <em class="field-error">{{error.message}}</em>
+        {{/each}}
+      </form.Field>
+      <form.Subscribe @selector={{selectFormErrors}} as |errors|>
+        {{#each errors as |error|}}
+          <em class="form-error">{{error.message}}</em>
+        {{/each}}
+      </form.Subscribe>
+    </template>);
+
+    assert.dom('.field-error').doesNotExist();
+    assert.dom('.form-error').doesNotExist();
+
+    await form.handleSubmit();
+    await settled();
+
+    assert.dom('.field-error').hasText('Email is already registered');
+    assert.dom('.form-error').hasText('Could not save passenger');
+
+    destroy(owner);
+  });
+});
