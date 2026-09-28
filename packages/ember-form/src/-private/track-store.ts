@@ -9,6 +9,14 @@ interface ReadableStore<TState extends object> {
 type Keyed = Record<string | symbol, unknown>
 
 /**
+ * A key whose readers invalidate when the version changes,
+ * instead of when the value changes.
+ */
+export type Versions<TState extends object> = {
+  [K in keyof TState]?: (state: TState) => unknown
+}
+
+/**
  * Returns a view of `store.state` that autotracking can observe per key.
  *
  * A read returns the live value, never a copy,
@@ -17,13 +25,35 @@ type Keyed = Record<string | symbol, unknown>
  * `trackedObject` compares with `Object.is`,
  * so a key that keeps its value does not invalidate its readers.
  *
+ * A key in `versions` invalidates its readers when its version changes,
+ * not when its value changes.
+ * `ArrayField` uses this to follow the shape of an array and not its items.
+ *
  * The subscription ends when `parent` is destroyed.
  */
 export function trackStore<TState extends object>(
   store: ReadableStore<TState>,
   parent: object,
+  versions: Versions<TState> = {},
 ): TState {
-  const tags = trackedObject({ ...store.state }) as Keyed
+  const versionOf = versions as Record<
+    string | symbol,
+    ((state: TState) => unknown) | undefined
+  >
+
+  function tagValue(state: TState, key: string | symbol) {
+    const version = versionOf[key]
+
+    return version ? version(state) : (state as Keyed)[key]
+  }
+
+  const initial: Keyed = {}
+
+  for (const key of Reflect.ownKeys(store.state)) {
+    initial[key] = tagValue(store.state, key)
+  }
+
+  const tags = trackedObject(initial)
 
   let isScheduled = false
 
@@ -32,10 +62,10 @@ export function trackStore<TState extends object>(
 
     if (isDestroying(parent)) return
 
-    const state = store.state as Keyed
+    const state = store.state
 
     for (const key of Reflect.ownKeys(state)) {
-      tags[key] = state[key]
+      tags[key] = tagValue(state, key)
     }
   }
 
