@@ -1,7 +1,8 @@
-import { click, fillIn, render } from '@ember/test-helpers';
+import Component from '@glimmer/component';
+import { click, fillIn, find, render } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { createForm } from '@tanstack/ember-form';
+import { ArrayField, createForm, mountForm } from '@tanstack/ember-form';
 import { handleInput } from '../helpers.ts';
 
 interface Hobbies {
@@ -136,5 +137,169 @@ module('Integration | Field @mode="array"', function (hooks) {
     await fillIn('.name:nth-of-type(2)', 'Hedy');
 
     assert.dom('#values').hasText('Ada,Hedy,');
+  });
+});
+
+module('Integration | ArrayField', function (hooks) {
+  setupRenderingTest(hooks);
+
+  test('the list follows pushValue and removeValue', async function (assert) {
+    await render(
+      <template>
+        <HobbiesForm as |tanstackForm|>
+          <tanstackForm.ArrayField @name="hobbies" as |field|>
+            <ul>
+              {{#each field.state.value as |hobby|}}
+                <li>{{hobby}}</li>
+              {{/each}}
+            </ul>
+
+            <button id="push" type="button" {{on "click" (push field)}}>
+              push
+            </button>
+            <button
+              id="remove"
+              type="button"
+              {{on "click" (removeFirst field)}}
+            >
+              remove
+            </button>
+          </tanstackForm.ArrayField>
+        </HobbiesForm>
+      </template>,
+    );
+
+    assert.dom('li').exists({ count: 1 });
+
+    await click('#push');
+
+    assert.dom('li').exists({ count: 2 });
+    assert.dom('li:last-child').hasText('go');
+
+    await click('#remove');
+
+    assert.dom('li').exists({ count: 1 });
+    assert.dom('li').hasText('go');
+  });
+
+  test('the list follows swapValues when the length stays the same', async function (assert) {
+    await render(
+      <template>
+        <PairForm as |tanstackForm|>
+          <tanstackForm.ArrayField @name="hobbies" as |field|>
+            <ul>
+              {{#each field.state.value as |hobby|}}
+                <li>{{hobby}}</li>
+              {{/each}}
+            </ul>
+
+            <button id="swap" type="button" {{on "click" (swap field)}}>
+              swap
+            </button>
+          </tanstackForm.ArrayField>
+        </PairForm>
+      </template>,
+    );
+
+    assert.dom('li:first-child').hasText('chess');
+
+    await click('#swap');
+
+    assert.dom('li:first-child').hasText('go');
+    assert.dom('li:last-child').hasText('chess');
+  });
+
+  test('an edit to one item keeps the DOM of the list', async function (assert) {
+    await render(
+      <template>
+        <PeopleForm as |tanstackForm|>
+          <tanstackForm.ArrayField @name="people" as |field|>
+            {{#each field.state.value as |_person index|}}
+              <tanstackForm.Field @name={{nameAt index}} as |nameField|>
+                <input
+                  class="name"
+                  value={{nameField.state.value}}
+                  {{on "input" (fn handleInput nameField)}}
+                />
+              </tanstackForm.Field>
+            {{/each}}
+          </tanstackForm.ArrayField>
+
+          <tanstackForm.Subscribe as |state|>
+            <output id="values">
+              {{#each state.values.people as |person|}}{{person.name}},{{/each}}
+            </output>
+          </tanstackForm.Subscribe>
+        </PeopleForm>
+      </template>,
+    );
+
+    const element = find('.name:nth-of-type(2)');
+
+    await fillIn('.name:nth-of-type(2)', 'Hedy');
+
+    assert.strictEqual(
+      find('.name:nth-of-type(2)'),
+      element,
+      'the input is the same element',
+    );
+    assert.dom('.name:nth-of-type(2)').hasValue('Hedy');
+    assert.dom('#values').hasText('Ada,Hedy,');
+  });
+
+  test('the export takes the form as @form', async function (assert) {
+    await render(
+      <template>
+        <HobbiesForm as |tanstackForm|>
+          <ArrayField @form={{tanstackForm}} @name="hobbies" as |field|>
+            <ul>
+              {{#each field.state.value as |hobby|}}
+                <li>{{hobby}}</li>
+              {{/each}}
+            </ul>
+
+            <button id="push" type="button" {{on "click" (push field)}}>
+              push
+            </button>
+          </ArrayField>
+        </HobbiesForm>
+      </template>,
+    );
+
+    assert.dom('li').exists({ count: 1 });
+
+    await click('#push');
+
+    assert.dom('li').exists({ count: 2 });
+  });
+
+  test('a form from mountForm has an ArrayField', async function (assert) {
+    class TestForm extends Component {
+      form = mountForm(this, {
+        defaultValues: { hobbies: ['chess'] } as Hobbies,
+      });
+
+      <template>
+        <this.form.ArrayField @name="hobbies" as |field|>
+          <ul>
+            {{#each field.state.value as |hobby|}}
+              <li>{{hobby}}</li>
+            {{/each}}
+          </ul>
+
+          <button id="push" type="button" {{on "click" (push field)}}>
+            push
+          </button>
+        </this.form.ArrayField>
+      </template>
+    }
+
+    await render(<template><TestForm /></template>);
+
+    assert.dom('li').exists({ count: 1 });
+
+    await click('#push');
+
+    assert.dom('li').exists({ count: 2 });
   });
 });

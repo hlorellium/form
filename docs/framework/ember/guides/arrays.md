@@ -9,7 +9,7 @@ TanStack Form supports arrays as values in a form, including sub-object values i
 
 > The examples name the form component `PeopleForm` and the yielded form `tanstackForm`. [Why not `form`?](./basic-concepts.md#why-not-form) explains the names.
 
-To use an array, you can iterate over `field.state.value` with [`{{#each}}`](https://api.emberjs.com/ember/release/classes/Ember.Templates.helpers/methods/each):
+To use an array, render an `ArrayField` and iterate over `field.state.value` with [`{{#each}}`](https://api.emberjs.com/ember/release/classes/Ember.Templates.helpers/methods/each):
 
 ```gjs
 import { createForm } from '@tanstack/ember-form';
@@ -22,14 +22,16 @@ const PeopleForm = createForm({
 
 <template>
   <PeopleForm as |tanstackForm|>
-    <tanstackForm.Field @name="people" @mode="array" as |field|>
+    <tanstackForm.ArrayField @name="people" as |field|>
       {{#each field.state.value as |person|}}
         {{!-- ... --}}
       {{/each}}
-    </tanstackForm.Field>
+    </tanstackForm.ArrayField>
   </PeopleForm>
 </template>
 ```
+
+`ArrayField` is a `Field` that tracks the _shape_ of the array rather than its items: the block re-renders when you push, insert, remove, swap, or move items, but not when a sub-field edits one of them. That keeps the DOM (and focus) of the list stable while typing. `<tanstackForm.Field @name="people" @mode="array">` behaves the same way; `ArrayField` also narrows `@name` to array paths.
 
 This will regenerate the list every time you run `pushValue` on `field`:
 
@@ -57,6 +59,8 @@ const nameAt = (i) => `people[${i}].name`;
 </tanstackForm.Field>
 ```
 
+Read the item's value from the sub-field (`subField.state.value`) rather than from the `{{#each}}` item. The `{{#each}}` item comes from the `ArrayField`, which only refreshes on shape changes.
+
 ## Full Example
 
 ```gjs
@@ -83,7 +87,7 @@ const PeopleForm = createForm({
 <template>
   <PeopleForm @onSubmit={{handleSubmit}} as |f|>
     <form id="form" {{on "submit" (onSubmitFor f)}}>
-      <f.Field @name="people" as |field|>
+      <f.ArrayField @name="people" as |field|>
         <div>
           {{#each field.state.value as |person i|}}
             <f.Field @name={{nameAt i}} as |subField|>
@@ -91,7 +95,7 @@ const PeopleForm = createForm({
                 <label>
                   <div>Name for person {{i}}</div>
                   <input
-                    value={{person.name}}
+                    value={{subField.state.value}}
                     {{on "input" (fn handleInput subField)}}
                   />
                 </label>
@@ -103,7 +107,7 @@ const PeopleForm = createForm({
             Add person
           </button>
         </div>
-      </f.Field>
+      </f.ArrayField>
 
       <button type="submit">Submit</button>
     </form>

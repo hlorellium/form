@@ -1,8 +1,7 @@
 import Component from '@glimmer/component';
 import { cached } from '@glimmer/tracking';
 import { FieldApi } from '@tanstack/form-core';
-import { registerDestructor } from '@ember/destroyable';
-import { trackStore } from '../-private/track-store.ts';
+import { arrayVersions, trackApi } from '../-private/track-api.ts';
 
 import type { FieldSignature } from '../types.ts';
 import type {
@@ -18,6 +17,10 @@ import type {
  * Yields a `FieldApi` for `@name`.
  *
  * `field.state` is autotracked.
+ *
+ * With `@mode="array"`, `field.state.value` follows the shape of the array
+ * and not its items, so an edit to one item keeps the DOM of the others.
+ * `<ArrayField>` sets this mode for you.
  *
  * @example
  * ```gjs
@@ -99,24 +102,11 @@ export default class Field<
     return { ...this.args, form: this.form };
   }
 
-  #api = this.#create();
-
-  #create() {
-    const api = new FieldApi(this.#options);
-    const state = trackStore(api.store, this);
-
-    /**
-     * form-core defines `state` as a prototype getter,
-     * and autotracking cannot observe it.
-     *
-     * svelte-form shadows the getter on the instance in the same way.
-     */
-    Object.defineProperty(api, 'state', { get: () => state });
-
-    registerDestructor(this, api.mount());
-
-    return api;
-  }
+  #api = trackApi(
+    this,
+    new FieldApi(this.#options),
+    this.args.mode === 'array' ? arrayVersions : undefined,
+  );
 
   /**
    * form-core documents `update` as free of side effects,

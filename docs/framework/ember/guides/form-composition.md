@@ -176,18 +176,12 @@ export const peopleFormOpts = formOptions({
 ```gjs
 // child-form.gts
 import Component from '@glimmer/component';
-import type { EmberFormExtendedApi } from '@tanstack/ember-form';
+import type { EmberFormFromOptions } from '@tanstack/ember-form';
 import { peopleFormOpts } from './shared-form.ts';
 import TextField from './text-field.gts';
 import SubscribeButton from './subscribe-button.gts';
 
-type PeopleForm = EmberFormExtendedApi<
-  typeof peopleFormOpts.defaultValues,
-  // The remaining type params are validator types; `undefined`s are fine
-  // when no validators are configured at the form level.
-  undefined, undefined, undefined, undefined, undefined,
-  undefined, undefined, undefined, undefined, undefined, unknown
->;
+type PeopleForm = EmberFormFromOptions<typeof peopleFormOpts>;
 
 interface ChildFormSignature {
   Args: {
@@ -228,7 +222,7 @@ const App = createForm(peopleFormOpts);
 </template>
 ```
 
-> The `EmberFormExtendedApi` generic chain is verbose, but the type can be derived from the form component's yielded block-param type if you'd rather lean on inference. In practice, most teams type the form arg loosely (`AnyFormApi`) inside reusable subcomponents and rely on the call site to provide type safety.
+`EmberFormFromOptions` derives the child arg's field paths and values from the shared options' `defaultValues`. This keeps checks such as `@name="firstName"` typed inside the child without repeating the full form generic list. The options object needs a `defaultValues` property for the helper to infer the form data shape.
 
 ## Reusing groups of fields in multiple forms
 

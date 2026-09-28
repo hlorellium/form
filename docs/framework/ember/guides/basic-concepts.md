@@ -92,6 +92,37 @@ const handleSubmit = async ({ value }) => {
 
 The component yields the form. Use it to render fields (`<tanstackForm.Field>`) and to read form state (`<tanstackForm.Subscribe>`).
 
+## Form Instance
+
+`mountForm` creates the form itself, without a component. Call it in a class, with the class instance as the first argument. The form mounts right away and is a destroyable child of that instance: it unmounts when the instance is destroyed. The result is the `FormApi` with the same additions the component yields — `Field`, `ArrayField`, `FormGroup`, `Subscribe`, and `useSelector` — so the template renders `<this.form.Field>`.
+
+```gjs
+import Component from '@glimmer/component';
+import { mountForm } from '@tanstack/ember-form';
+
+export default class PersonEditor extends Component {
+  form = mountForm(this, {
+    defaultValues: { firstName: '', lastName: '', hobbies: [] },
+    onSubmit: async ({ value }) => {
+      await this.args.save(value);
+    },
+  });
+
+  <template>
+    <this.form.Field @name="firstName" as |field|>
+      {{!-- ... --}}
+    </this.form.Field>
+  </template>
+}
+```
+
+Pick the door that fits:
+
+- `createForm` when the form is a reusable component, or when a template-only component owns it. Per-instance state arrives as args.
+- `mountForm` when a class owns the form: its callbacks close over the class, a getter reads it through `useSelector`, or you need the form before the first render.
+
+The second argument may be a function, `() => ({ ... })`, when the options read tracked state such as `this.args`. Changed options are applied on the next bound component or `useSelector(...).current` read, direct state read, validation, reset, or submit call.
+
 ### Why not `form`?
 
 The other TanStack Form adapters name the result of `createForm` or `useForm` as `form`. In Ember, that name causes two problems.
@@ -101,7 +132,7 @@ The other TanStack Form adapters name the result of `createForm` or `useForm` as
 
 The examples name the yielded form `tanstackForm`. If the markup contains a `<form>` element, the examples use the short name `f`.
 
-A class property does not have this limit, because the template reads it as `this.form`.
+A class property does not have this limit, because the template reads it as `this.form`. The `mountForm` examples use `form = mountForm(this, ...)` for that reason.
 
 ## Field
 
@@ -352,9 +383,11 @@ const NameForm = createForm({
 
 ## Array Fields
 
-Array fields allow you to manage a list of values within a form, such as a list of hobbies. You can create an array field by passing `@mode="array"` to `<Field>`.
+Array fields allow you to manage a list of values within a form, such as a list of hobbies. You can create an array field with `<ArrayField>`, or by passing `@mode="array"` to `<Field>`; the two behave the same, and `<ArrayField>` also checks that `@name` names an array.
 
 When working with array fields, you can use the field's `pushValue`, `removeValue`, `swapValues`, and `moveValue` methods to add, remove, swap, and move a value from one index to another within the array, respectively. Additional helper methods such as `insertValue`, `replaceValue`, and `clearValues` are also available for inserting, replacing, and clearing array values.
+
+In an array field, `field.state.value` follows the _shape_ of the array — those methods — and not its items. Iterate over it with `{{#each}}`, and read and write each item through a `<Field>` of its own. An edit to one item then re-renders that item's input only, and the other items keep their DOM (and focus).
 
 Example:
 
@@ -375,7 +408,7 @@ const HobbiesForm = createForm({
 
 <template>
   <HobbiesForm as |tanstackForm|>
-    <tanstackForm.Field @name="hobbies" @mode="array" as |hobbiesField|>
+    <tanstackForm.ArrayField @name="hobbies" as |hobbiesField|>
       <div>
         Hobbies
         <div>
@@ -389,7 +422,7 @@ const HobbiesForm = createForm({
                     name={{field.name}}
                     value={{field.state.value}}
                     {{on "blur" field.handleBlur}}
-                    {{on "change" (fn handleInput field)}}
+                    {{on "input" (fn handleInput field)}}
                   />
                   <button type="button" {{on "click" (fn hobbiesField.removeValue i)}}>
                     X
@@ -404,7 +437,7 @@ const HobbiesForm = createForm({
                     name={{field.name}}
                     value={{field.state.value}}
                     {{on "blur" field.handleBlur}}
-                    {{on "change" (fn handleInput field)}}
+                    {{on "input" (fn handleInput field)}}
                   />
                 </div>
               </tanstackForm.Field>
@@ -417,9 +450,93 @@ const HobbiesForm = createForm({
           Add hobby
         </button>
       </div>
-    </tanstackForm.Field>
+    </tanstackForm.ArrayField>
   </HobbiesForm>
 </template>
 ```
+
+## Form Groups
+
+A form group is a part of the form — the fields under one `@name` — with validators, listeners, and a submit lifecycle of its own. `<FormGroup>` yields form-core's `FormGroupApi`:
+
+- `group.state.value` is the value under `@name`.
+- `group.state.meta` aggregates the fields in the group: `isValid`, `canSubmit`, `errors`, `isSubmitting`, `submissionAttempts`, and so on. It is autotracked.
+- `group.handleSubmit()` validates and submits only the fields in the group, and calls `@onGroupSubmit`. The form's own `onSubmit` does not run.
+- `@validators` receive the value of the group. Return a message for the group, or `{ fields: { street: 'Required' } }` to place messages on the fields, with names relative to the group.
+
+The fields inside a group keep their full names. In `<FormGroup @name="address">`, the street is `@name="address.street"`.
+
+```gjs
+import { createForm } from '@tanstack/ember-form';
+
+const handleInput = (field, event) => field.handleChange(event.target.value);
+
+const validateAddress = ({ value }) =>
+  value.street && value.city ? undefined : 'Enter the street and the city';
+
+const saveAddress = ({ value }) => console.log('address', value);
+
+const ProfileForm = createForm({
+  defaultValues: {
+    name: '',
+    address: { street: '', city: '' },
+  },
+});
+
+<template>
+  <ProfileForm as |tanstackForm|>
+    <tanstackForm.FormGroup
+      @name="address"
+      @validators={{hash onChange=validateAddress}}
+      @onGroupSubmit={{saveAddress}}
+      as |address|
+    >
+      <tanstackForm.Field @name="address.street" as |field|>
+        <input
+          value={{field.state.value}}
+          {{on "input" (fn handleInput field)}}
+        />
+      </tanstackForm.Field>
+      <tanstackForm.Field @name="address.city" as |field|>
+        <input
+          value={{field.state.value}}
+          {{on "input" (fn handleInput field)}}
+        />
+      </tanstackForm.Field>
+
+      {{#each address.state.meta.errors as |error|}}
+        <em>{{error}}</em>
+      {{/each}}
+
+      <button type="button" {{on "click" address.handleSubmit}}>
+        Save address
+      </button>
+    </tanstackForm.FormGroup>
+  </ProfileForm>
+</template>
+```
+
+`FormGroup` is also an export that takes the form as `@form`, like `Field` and `Subscribe`.
+
+When a group must survive a hidden wizard step, create it on the form instead
+of in the template:
+
+```gts
+form = mountForm(this, {
+  defaultValues: { address: { street: '', city: '' } },
+})
+
+address = this.form.createGroup({
+  name: 'address',
+  onGroupSubmit: ({ value }) => this.args.saveAddress(value),
+})
+```
+
+`this.address.handleSubmit()` runs the group's validators and submit callback
+while the section is hidden. Field validators belong to their mounted fields,
+so keep a group-level validator for rules that must run while those fields are
+absent. The group is cleaned up with the form. Create one group per name, and
+use `group.update(options)` if its configuration changes. Rendered fields
+still use full paths such as `address.street`.
 
 These are the basic concepts and terminology used in the `@tanstack/ember-form` library. Understanding these concepts will help you work more effectively with the library and create complex forms with ease.

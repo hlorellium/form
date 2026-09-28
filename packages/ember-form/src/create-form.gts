@@ -2,9 +2,7 @@ import Component from '@glimmer/component';
 import { cached } from '@glimmer/tracking';
 import { FormApi } from '@tanstack/form-core';
 import { registerDestructor } from '@ember/destroyable';
-import { trackStore } from './-private/track-store.ts';
-import Field from './components/field.gts';
-import Subscribe from './components/subscribe.gts';
+import { extendForm } from './-private/extend-form.ts';
 
 import type { EmberFormApi, FormComponentSignature } from './types.ts';
 import type { ComponentLike } from '@glint/template';
@@ -19,6 +17,8 @@ import type {
  *
  * Call this in module scope.
  * Each arg on the component overrides the same key in `baseOptions`.
+ *
+ * To own a form in a class instead, see `mountForm`.
  *
  * @example
  * ```gjs
@@ -130,33 +130,9 @@ export function createForm<
 
     #create() {
       const api = new FormApi(this.#options);
-      const state = trackStore(api.store, this);
 
-      const extensions: Extensions = {
-        Field: class extends Field<
-          // The `FieldComponent` type gives each invocation its generics.
-          any, any, any, any, any, any, any, any, any, any, any, any,
-          any, any, any, any, any, any, any, any, any, any, any
-        > {
-          get form() {
-            return api;
-          }
-        } as never,
-
-        Subscribe: class extends Subscribe<
-          any, any, any, any, any, any, any, any, any, any, any, any
-        > {
-          get form() {
-            return api;
-          }
-        } as never,
-
-        useSelector: ((selector?: (state: typeof api.state) => unknown) => ({
-          get current() {
-            return selector ? selector(state) : state;
-          },
-        })) as Extensions['useSelector'],
-      };
+      // The `form` getter applies the args before it yields, so the components read the api as is.
+      const extensions: Extensions = extendForm(api, this, () => api);
 
       registerDestructor(this, api.mount());
 
