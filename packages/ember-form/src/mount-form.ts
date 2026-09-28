@@ -1,4 +1,7 @@
-import { registerDestructor } from '@ember/destroyable'
+import {
+  associateDestroyableChild,
+  registerDestructor,
+} from '@ember/destroyable'
 import { createCache, getValue } from '@glimmer/tracking/primitives/cache'
 import { FormApi } from '@tanstack/form-core'
 import { extendForm } from './-private/extend-form.ts'
@@ -14,7 +17,8 @@ import type {
  * Returns a form that `parent` owns.
  *
  * Call this in a class, with the class instance as `parent`.
- * The form mounts now and unmounts when `parent` is destroyed.
+ * The form mounts now, and it is a destroyable child of `parent`:
+ * it unmounts when `parent` is destroyed, or when you `destroy` it.
  *
  * `options` is an object, or a function that returns one.
  * A function may read tracked state, for example `this.args`.
@@ -134,6 +138,8 @@ export function mountForm<
 
   const api = new FormApi(currentOptions())
 
+  associateDestroyableChild(parent, api)
+
   /**
    * form-core documents `update` as free of side effects,
    * so the form can apply the current options when it is read.
@@ -144,13 +150,13 @@ export function mountForm<
     api.update(currentOptions())
   })
 
-  const extensions: Extensions = extendForm(api, parent, () => {
+  const extensions: Extensions = extendForm(api, api, () => {
     getValue(applyOptions)
 
     return api
   })
 
-  registerDestructor(parent, api.mount())
+  registerDestructor(api, api.mount())
 
   return Object.assign(api, extensions)
 }

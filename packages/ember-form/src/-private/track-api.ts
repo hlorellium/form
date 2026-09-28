@@ -9,6 +9,7 @@ interface MountableApi<TState extends object> {
     subscribe: (listener: () => void) => { unsubscribe: () => void }
   }
   state: TState
+  update: (options: never) => void
   mount: () => () => void
 }
 
@@ -20,14 +21,34 @@ interface MountableApi<TState extends object> {
  *
  * svelte-form shadows the getter on the instance in the same way.
  */
-export function trackApi<TState extends object, TApi extends MountableApi<TState>>(
-  parent: object,
-  api: TApi,
-  versions?: Versions<TState>,
-): TApi {
+export function trackApi<
+  TState extends object,
+  TApi extends MountableApi<TState>,
+>(parent: object, api: TApi, versions?: Versions<TState>): TApi {
   const state = trackStore(api.store, parent, versions)
 
-  Object.defineProperty(api, 'state', { get: () => state })
+  /**
+   * `update` reads `state.meta` to decide whether to apply a default value.
+   * The component calls `update` from the getter that yields the api,
+   * and that getter must not run again each time the meta changes,
+   * so `update` reads the store and not the autotracked view.
+   */
+  const update = api.update
+  let isUpdating = false
+
+  api.update = (options) => {
+    isUpdating = true
+
+    try {
+      update(options)
+    } finally {
+      isUpdating = false
+    }
+  }
+
+  Object.defineProperty(api, 'state', {
+    get: () => (isUpdating ? api.store.state : state),
+  })
 
   registerDestructor(parent, api.mount())
 
